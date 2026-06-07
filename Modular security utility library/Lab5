@@ -1,0 +1,437 @@
+Modular Security Utility Library
+Prerequisites
+Basic Python programming knowledge (variables, functions, loops)
+Familiarity with Linux command line
+Understanding of file operations in Python
+Basic knowledge of text encoding concepts
+Learning Objectives
+By completing this lab, you will:
+
+Build reusable secure code modules in Python
+Organize security functions into logical modules
+Implement basic security utilities for common tasks
+Apply modular programming principles to security code
+Test and verify security utility functions
+Environment Setup
+After clicking the "Start Lab" button, you'll have access to a bare-metal Linux machine. Install the required tools:
+
+# Update package manager
+sudo apt update
+
+# Install Python 3 and pip (if not already installed)
+sudo apt install -y python3 python3-pip
+
+# Create lab directory
+mkdir -p ~/security-lab5
+cd ~/security-lab5
+
+# Verify Python installation
+python3 --version
+Task 1: Design and Implement Password Validation Module
+Step 1: Create the Module Structure
+Create the main directory structure for your security library:
+
+cd ~/security-lab5
+
+# Create module directories
+mkdir -p securitylib/password
+mkdir -p securitylib/hash
+mkdir -p tests
+
+# Create __init__.py files to make them Python packages
+touch securitylib/__init__.py
+touch securitylib/password/__init__.py
+touch securitylib/hash/__init__.py
+Step 2: Build Password Validation Module
+Create the password validation utility:
+
+nano securitylib/password/validator.py
+Add the following starter code and complete the TODO sections:
+
+"""
+Password validation module for security library.
+Provides functions to check password strength and compliance.
+"""
+
+import re
+
+def check_length(password, min_length=8):
+    """
+    Check if password meets minimum length requirement.
+    
+    Args:
+        password (str): The password to check
+        min_length (int): Minimum required length (default: 8)
+    
+    Returns:
+        bool: True if password meets length requirement
+    """
+    # TODO: Return True if password length >= min_length, False otherwise
+    pass
+
+
+def has_uppercase(password):
+    """
+    Check if password contains at least one uppercase letter.
+    
+    Args:
+        password (str): The password to check
+    
+    Returns:
+        bool: True if password has uppercase letter
+    """
+    # TODO: Use any() and str.isupper() to check for uppercase letters
+    # Hint: any(char.isupper() for char in password)
+    pass
+
+
+def has_lowercase(password):
+    """
+    Check if password contains at least one lowercase letter.
+    
+    Args:
+        password (str): The password to check
+    
+    Returns:
+        bool: True if password has lowercase letter
+    """
+    # TODO: Similar to has_uppercase, but check for lowercase
+    pass
+
+
+def has_digit(password):
+    """
+    Check if password contains at least one digit.
+    
+    Args:
+        password (str): The password to check
+    
+    Returns:
+        bool: True if password has digit
+    """
+    # TODO: Use any() and str.isdigit() to check for digits
+    pass
+
+
+def has_special_char(password):
+    """
+    Check if password contains at least one special character.
+    
+    Args:
+        password (str): The password to check
+    
+    Returns:
+        bool: True if password has special character
+    """
+    special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+    # TODO: Check if any character in password is in special_chars
+    pass
+
+
+def validate_password(password, min_length=8):
+    """
+    Comprehensive password validation.
+    
+    Args:
+        password (str): The password to validate
+        min_length (int): Minimum required length
+    
+    Returns:
+        dict: Validation results with 'valid' boolean and 'errors' list
+    """
+    errors = []
+    
+    # TODO: Call each validation function and add error messages
+    # Example: if not check_length(password, min_length):
+    #              errors.append(f"Password must be at least {min_length} characters")
+    
+    # TODO: Check for uppercase, lowercase, digit, and special character
+    # Add appropriate error messages for each failed check
+    
+    return {
+        'valid': len(errors) == 0,
+        'errors': errors
+    }
+Solution Reference (for instructor verification):
+
+# Complete implementation for check_length
+def check_length(password, min_length=8):
+    return len(password) >= min_length
+
+# Complete implementation for has_uppercase
+def has_uppercase(password):
+    return any(char.isupper() for char in password)
+Step 3: Build Hash Utility Module
+Create a module for secure hashing operations:
+
+nano securitylib/hash/hasher.py
+Add this starter code:
+
+"""
+Hashing utilities for secure password storage and data integrity.
+"""
+
+import hashlib
+
+def hash_sha256(data):
+    """
+    Generate SHA-256 hash of input data.
+    
+    Args:
+        data (str): Data to hash
+    
+    Returns:
+        str: Hexadecimal hash string
+    """
+    # TODO: Encode data to bytes, create sha256 hash, return hexdigest
+    # Hint: hashlib.sha256(data.encode()).hexdigest()
+    pass
+
+
+def hash_file(filepath):
+    """
+    Generate SHA-256 hash of a file's contents.
+    
+    Args:
+        filepath (str): Path to file
+    
+    Returns:
+        str: Hexadecimal hash of file contents
+    """
+    # TODO: Open file in binary mode, read contents, hash with sha256
+    # Use 'rb' mode for reading binary
+    pass
+
+
+def verify_hash(data, expected_hash):
+    """
+    Verify if data matches expected hash.
+    
+    Args:
+        data (str): Data to verify
+        expected_hash (str): Expected hash value
+    
+    Returns:
+        bool: True if hashes match
+    """
+    # TODO: Hash the data and compare with expected_hash
+    pass
+Step 4: Create Package Initialization
+Make modules easily importable:
+
+nano securitylib/__init__.py
+Add:
+
+"""
+Security Utility Library
+A modular collection of security functions.
+"""
+
+from securitylib.password import validator
+from securitylib.hash import hasher
+
+__version__ = "1.0.0"
+__all__ = ['validator', 'hasher']
+Task 2: Test and Verify Security Utilities
+Step 1: Create Test Script
+Build a comprehensive test script:
+
+nano tests/test_security.py
+Add:
+
+"""
+Test script for security utility library.
+"""
+
+import sys
+sys.path.insert(0, '/home/ubuntu/security-lab5')
+
+from securitylib.password import validator
+from securitylib.hash import hasher
+
+def test_password_validation():
+    """Test password validation functions."""
+    print("=== Testing Password Validation ===\n")
+    
+    test_passwords = [
+        "weak",
+        "StrongPass123!",
+        "noupppercase123!",
+        "NOLOWERCASE123!",
+        "NoDigitsHere!",
+        "NoSpecialChar123"
+    ]
+    
+    for pwd in test_passwords:
+        result = validator.validate_password(pwd)
+        print(f"Password: {pwd}")
+        print(f"Valid: {result['valid']}")
+        if not result['valid']:
+            print(f"Errors: {', '.join(result['errors'])}")
+        print()
+
+
+def test_hashing():
+    """Test hashing functions."""
+    print("=== Testing Hash Functions ===\n")
+    
+    # Test string hashing
+    test_data = "SecureData123"
+    hash_result = hasher.hash_sha256(test_data)
+    print(f"Data: {test_data}")
+    print(f"SHA-256: {hash_result}\n")
+    
+    # Test hash verification
+    is_valid = hasher.verify_hash(test_data, hash_result)
+    print(f"Hash verification: {is_valid}\n")
+    
+    # Test file hashing
+    with open('/tmp/test_file.txt', 'w') as f:
+        f.write("Test file content for hashing")
+    
+    file_hash = hasher.hash_file('/tmp/test_file.txt')
+    print(f"File hash: {file_hash}\n")
+
+
+if __name__ == "__main__":
+    test_password_validation()
+    test_hashing()
+    print("=== All Tests Complete ===")
+Step 2: Run Tests
+Execute your test script:
+
+cd ~/security-lab5
+python3 tests/test_security.py
+Expected Output:
+
+Password validation results showing which passwords pass/fail
+Hash values for test data
+Verification results
+File hash output
+Step 3: Create Interactive Demo
+Build a simple CLI tool using your library:
+
+nano demo_tool.py
+Add:
+
+#!/usr/bin/env python3
+"""
+Interactive demo of security utility library.
+"""
+
+from securitylib.password import validator
+from securitylib.hash import hasher
+
+def main():
+    print("Security Utility Library Demo\n")
+    print("1. Validate Password")
+    print("2. Hash Data")
+    print("3. Exit")
+    
+    choice = input("\nEnter choice (1-3): ")
+    
+    if choice == "1":
+        password = input("Enter password to validate: ")
+        result = validator.validate_password(password)
+        
+        if result['valid']:
+            print("\n✓ Password is strong!")
+        else:
+            print("\n✗ Password is weak:")
+            for error in result['errors']:
+                print(f"  - {error}")
+    
+    elif choice == "2":
+        data = input("Enter data to hash: ")
+        hash_value = hasher.hash_sha256(data)
+        print(f"\nSHA-256 Hash: {hash_value}")
+    
+    elif choice == "3":
+        print("Goodbye!")
+    else:
+        print("Invalid choice")
+
+if __name__ == "__main__":
+    main()
+Make it executable and run:
+
+chmod +x demo_tool.py
+python3 demo_tool.py
+Verification
+Verify Module Structure
+Check that all files are properly organized:
+
+cd ~/security-lab5
+tree -L 3
+Expected structure:
+
+.
+├── securitylib/
+│   ├── __init__.py
+│   ├── password/
+│   │   ├── __init__.py
+│   │   └── validator.py
+│   └── hash/
+│       ├── __init__.py
+│       └── hasher.py
+├── tests/
+│   └── test_security.py
+└── demo_tool.py
+Verify Functionality
+Test each module independently:
+
+# Test password module
+python3 -c "from securitylib.password import validator; print(validator.validate_password('Test123!'))"
+
+# Test hash module
+python3 -c "from securitylib.hash import hasher; print(hasher.hash_sha256('test'))"
+Verify Import System
+Ensure modules can be imported correctly:
+
+python3 << EOF
+import sys
+sys.path.insert(0, '/home/ubuntu/security-lab5')
+from securitylib import validator, hasher
+print("Modules imported successfully!")
+print(f"Validator functions: {dir(validator)}")
+print(f"Hasher functions: {dir(hasher)}")
+EOF
+Troubleshooting Tips
+Import Errors:
+
+Ensure __init__.py files exist in all package directories
+Check that you're running Python from the correct directory
+Verify sys.path includes your lab directory
+Module Not Found:
+
+Use absolute paths or add directory to PYTHONPATH
+Check file permissions: chmod 644 securitylib/**/*.py
+Function Returns None:
+
+Ensure you completed all TODO sections
+Check that functions have return statements, not just pass
+Hash Function Errors:
+
+Verify data is encoded to bytes before hashing
+Use .encode() for strings, 'rb' mode for files
+Conclusion
+You have successfully created a modular security utility library with:
+
+Reusable password validation functions organized in a dedicated module
+Secure hashing utilities for data integrity verification
+Proper Python package structure with __init__.py files
+Comprehensive testing framework to verify functionality
+Practical CLI demo tool showcasing library usage
+This modular approach allows you to:
+
+Reuse security code across multiple projects
+Maintain and update functions independently
+Share utilities with team members
+Build more complex security tools on this foundation
+Key Takeaways:
+
+Modular design improves code maintainability and reusability
+Security functions should be well-documented and tested
+Python packages enable organized, importable code libraries
+Validation and hashing are fundamental security operations
+Your security library can now be expanded with additional modules for encryption, authentication, logging, and more advanced security features.
