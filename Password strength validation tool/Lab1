@@ -1,0 +1,333 @@
+ Password Strength Validation Tool
+Prerequisites
+Basic understanding of Linux command line
+Familiarity with text editors (nano or vim)
+Basic knowledge of Python programming (variables, functions, conditionals)
+Access to a Linux machine with Python 3 installed
+Learning Objectives
+By completing this lab, you will:
+
+Understand password security best practices
+Implement password length and complexity validation
+Detect common password patterns and weaknesses
+Create a strength scoring system with user feedback
+Apply regular expressions for pattern matching
+Environment Setup
+Step 1: Verify Python Installation
+python3 --version
+Expected output: Python 3.x.x
+
+Step 2: Create Lab Directory
+mkdir ~/password-validator-lab
+cd ~/password-validator-lab
+Step 3: Create Project File
+touch password_validator.py
+chmod +x password_validator.py
+Task 1: Build the Password Validator
+Step 1: Import Required Libraries
+Open the file in your text editor:
+
+nano password_validator.py
+Add the following imports:
+
+#!/usr/bin/env python3
+import re
+import sys
+
+# Common weak passwords list
+COMMON_PASSWORDS = [
+    'password', '123456', '12345678', 'qwerty', 'abc123',
+    'monkey', '1234567', 'letmein', 'trustno1', 'dragon',
+    'baseball', 'iloveyou', 'master', 'sunshine', 'ashley',
+    'bailey', 'passw0rd', 'shadow', '123123', '654321'
+]
+Step 2: Create Length Validation Function
+Add this function below your imports:
+
+def check_length(password):
+    """
+    Check if password meets minimum length requirement.
+    
+    Args:
+        password (str): The password to validate
+    
+    Returns:
+        tuple: (bool, str) - (is_valid, feedback_message)
+    """
+    min_length = 8
+    max_length = 128
+    
+    # TODO: Check if password length is between min_length and max_length
+    # TODO: Return (True, "Length is adequate") if valid
+    # TODO: Return (False, "Password must be 8-128 characters") if invalid
+    
+    pass
+Implementation hint: Use the len() function to check password length.
+
+Step 3: Create Complexity Validation Function
+Add this function:
+
+def check_complexity(password):
+    """
+    Check if password contains required character types.
+    
+    Args:
+        password (str): The password to validate
+    
+    Returns:
+        tuple: (int, list) - (score, list_of_missing_requirements)
+    """
+    score = 0
+    missing = []
+    
+    # TODO: Check for lowercase letters using re.search(r'[a-z]', password)
+    # TODO: Check for uppercase letters using re.search(r'[A-Z]', password)
+    # TODO: Check for digits using re.search(r'\d', password)
+    # TODO: Check for special characters using re.search(r'[!@#$%^&*(),.?":{}|<>]', password)
+    # TODO: Add 1 to score for each type found
+    # TODO: Add missing types to the missing list
+    
+    pass
+Implementation hint: Use re.search() to find patterns. If it returns None, the pattern is missing.
+
+Step 4: Create Common Pattern Detection Function
+Add this function:
+
+def check_common_patterns(password):
+    """
+    Check for common weak patterns in password.
+    
+    Args:
+        password (str): The password to validate
+    
+    Returns:
+        tuple: (bool, list) - (has_weak_patterns, list_of_issues)
+    """
+    issues = []
+    
+    # TODO: Check if password is in COMMON_PASSWORDS list (case-insensitive)
+    # TODO: Check for sequential numbers like "123" or "abc" using regex
+    # TODO: Check for repeated characters (3+ times) like "aaa" or "111"
+    # TODO: Add found issues to the issues list
+    
+    pass
+Implementation hint: Use password.lower() in COMMON_PASSWORDS for case-insensitive checking.
+
+Step 5: Create Strength Scoring Function
+Add this function:
+
+def calculate_strength(password):
+    """
+    Calculate overall password strength score.
+    
+    Args:
+        password (str): The password to validate
+    
+    Returns:
+        dict: Dictionary containing score, strength level, and feedback
+    """
+    total_score = 0
+    feedback = []
+    
+    # Check length
+    length_valid, length_msg = check_length(password)
+    if not length_valid:
+        feedback.append(length_msg)
+        return {
+            'score': 0,
+            'strength': 'Invalid',
+            'feedback': feedback
+        }
+    else:
+        total_score += 20
+    
+    # TODO: Call check_complexity() and add complexity_score * 15 to total_score
+    # TODO: Add missing requirements to feedback list
+    
+    # TODO: Call check_common_patterns() and subtract 30 from total_score if weak patterns found
+    # TODO: Add pattern issues to feedback list
+    
+    # TODO: Add bonus points for length > 12 characters (10 points)
+    # TODO: Add bonus points for length > 16 characters (additional 10 points)
+    
+    # TODO: Determine strength level based on total_score:
+    # 0-30: Weak, 31-60: Fair, 61-80: Good, 81-100: Strong
+    
+    pass
+Step 6: Create Main Function
+Add the main function and user interface:
+
+def main():
+    """
+    Main function to run the password validator.
+    """
+    print("=" * 50)
+    print("Password Strength Validator")
+    print("=" * 50)
+    
+    # TODO: Get password input from user (use getpass for hidden input in production)
+    # For this lab, use: password = input("Enter password to validate: ")
+    
+    # TODO: Call calculate_strength(password)
+    
+    # TODO: Print the results in a formatted way:
+    # - Strength level
+    # - Score
+    # - Feedback messages
+    
+    pass
+
+if __name__ == "__main__":
+    main()
+Step 7: Complete Implementation Example
+Here's a reference for one complete function to guide your implementation:
+
+def check_length(password):
+    """Check if password meets minimum length requirement."""
+    min_length = 8
+    max_length = 128
+    
+    if min_length <= len(password) <= max_length:
+        return (True, "Length is adequate")
+    else:
+        return (False, f"Password must be {min_length}-{max_length} characters")
+Step 8: Test Your Validator
+Save your file and run it:
+
+python3 password_validator.py
+Test with these passwords:
+
+pass - Should fail (too short)
+password123 - Should be weak (common password)
+MyP@ssw0rd - Should be fair/good
+Tr0ng!P@ssw0rd2024 - Should be strong
+Task 2: Enhanced Validation Features
+Step 1: Add Dictionary Attack Prevention
+Create a file with common passwords:
+
+cat > common_passwords.txt << EOF
+password
+123456
+12345678
+qwerty
+abc123
+EOF
+Step 2: Enhance Validator with File Loading
+Add this function to your script:
+
+def load_common_passwords(filename='common_passwords.txt'):
+    """
+    Load common passwords from file.
+    
+    Args:
+        filename (str): Path to password dictionary file
+    
+    Returns:
+        set: Set of common passwords
+    """
+    # TODO: Try to open and read the file
+    # TODO: Return a set of lowercase passwords (one per line)
+    # TODO: Handle FileNotFoundError and return empty set if file doesn't exist
+    
+    pass
+Step 3: Create Batch Testing Script
+Create a test file:
+
+cat > test_passwords.txt << EOF
+password
+MyP@ss123
+Str0ng!Pass2024
+abc123
+TestP@ssw0rd!2024
+EOF
+Add batch testing function:
+
+def batch_test(filename):
+    """
+    Test multiple passwords from a file.
+    
+    Args:
+        filename (str): Path to file containing passwords (one per line)
+    """
+    # TODO: Read passwords from file
+    # TODO: Test each password and print results
+    # TODO: Print summary statistics (total tested, strong, weak, etc.)
+    
+    pass
+Verification
+Test 1: Basic Functionality
+Run your validator and verify:
+
+python3 password_validator.py
+Weak password detection works
+Strong password gets high score
+Feedback messages are clear
+Test 2: Pattern Detection
+Test these specific patterns:
+
+# Add this test function temporarily
+def run_tests():
+    test_cases = [
+        ("abc123", "Should detect sequential pattern"),
+        ("Password123", "Should detect common word"),
+        ("aaa111", "Should detect repetition"),
+        ("Tr0ng!P@ss#2024", "Should score high")
+    ]
+    
+    for password, description in test_cases:
+        result = calculate_strength(password)
+        print(f"\n{description}")
+        print(f"Password: {password}")
+        print(f"Result: {result}")
+
+run_tests()
+Test 3: Edge Cases
+Verify handling of:
+
+Empty password
+Very long password (>128 characters)
+Special characters only
+Unicode characters
+Expected Outcomes
+After completing this lab, you should have:
+
+A working password validator that checks:
+
+Length requirements (8-128 characters)
+Character complexity (uppercase, lowercase, digits, special chars)
+Common password patterns
+Sequential and repeated characters
+Understanding of:
+
+Regular expressions for pattern matching
+Password security best practices
+Scoring algorithms for security assessment
+A reusable tool that can be integrated into other projects
+
+Troubleshooting Tips
+Issue: ModuleNotFoundError: No module named 're'
+
+Solution: The re module is built-in. Check Python version with python3 --version
+Issue: Password input shows on screen
+
+Solution: For production, use import getpass and getpass.getpass() instead of input()
+Issue: File not found when loading common passwords
+
+Solution: Verify file exists with ls -la common_passwords.txt and check file path
+Issue: Regex patterns not matching
+
+Solution: Test patterns individually using Python interactive mode: python3 then import re; re.search(r'[a-z]', 'Test')
+Conclusion
+You have successfully created a password strength validation tool that enforces security best practices. This tool demonstrates key cybersecurity concepts including:
+
+Defense in depth through multiple validation layers
+Pattern recognition for threat detection
+User feedback for security awareness
+Automated security policy enforcement
+This validator can be extended with additional features like:
+
+Entropy calculation
+Password breach database checking
+Password generation suggestions
+Integration with authentication systems
+These skills are fundamental for cybersecurity professionals working on identity and access management, application security, and security policy enforcement.
