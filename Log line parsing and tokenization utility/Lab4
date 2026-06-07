@@ -1,0 +1,459 @@
+ Log Line Parsing and Tokenization Utility
+Prerequisites
+Basic Linux command line knowledge (navigating directories, creating files)
+Fundamental understanding of text files
+Basic Python programming (variables, functions, loops)
+Familiarity with string operations
+Learning Objectives
+By completing this lab, you will:
+
+Understand structured log file formats
+Parse log lines into individual components
+Extract timestamps, IP addresses, and message fields
+Tokenize log data for analysis
+Build a reusable log parsing utility
+Environment Setup
+Step 1: Start Your Lab Environment
+Click the Start Lab button to provision your Linux machine. Once ready, connect via SSH.
+
+Step 2: Install Required Tools
+# Update package manager
+sudo apt update
+
+# Install Python 3 and pip (if not already installed)
+sudo apt install -y python3 python3-pip
+
+# Verify installation
+python3 --version
+Step 3: Create Lab Directory
+# Create and navigate to lab directory
+mkdir -p ~/log-parser-lab
+cd ~/log-parser-lab
+Step 4: Create Sample Log File
+# Create a sample log file with various formats
+cat > sample.log << 'EOF'
+2024-01-15 10:23:45 192.168.1.100 INFO User login successful
+2024-01-15 10:24:12 10.0.0.45 ERROR Failed authentication attempt
+2024-01-15 10:25:33 172.16.0.88 WARNING High memory usage detected
+2024-01-15 10:26:01 192.168.1.100 INFO User logout
+2024-01-15 10:27:18 203.0.113.42 ERROR Connection timeout
+2024-01-15 10:28:45 192.168.1.105 INFO File upload completed
+2024-01-15 10:29:52 10.0.0.45 WARNING Disk space low
+2024-01-15 10:30:15 172.16.0.88 INFO Database backup started
+EOF
+
+# View the log file
+cat sample.log
+Task 1: Build Basic Log Parser
+Step 1: Create Parser Script
+Create a Python script for parsing log lines:
+
+nano log_parser.py
+Add the following starter code:
+
+#!/usr/bin/env python3
+"""
+Log Parser Utility
+Parses structured log files and extracts key components
+"""
+
+import re
+from datetime import datetime
+from typing import Dict, List, Optional
+
+def parse_log_line(line: str) -> Optional[Dict[str, str]]:
+    """
+    Parse a single log line into components.
+    
+    Expected format: YYYY-MM-DD HH:MM:SS IP_ADDRESS LEVEL MESSAGE
+    
+    Args:
+        line: A single log line string
+    
+    Returns:
+        Dictionary with parsed components or None if parsing fails
+    
+    Example:
+        Input: "2024-01-15 10:23:45 192.168.1.100 INFO User login successful"
+        Output: {
+            'timestamp': '2024-01-15 10:23:45',
+            'ip_address': '192.168.1.100',
+            'level': 'INFO',
+            'message': 'User login successful'
+        }
+    """
+    # TODO: Create regex pattern to match log format
+    # Pattern should capture: date, time, IP, level, and message
+    pattern = r'(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})\s+(\S+)\s+(\w+)\s+(.+)'
+    
+    # TODO: Use re.match() to extract components
+    # Hint: match = re.match(pattern, line)
+    
+    # TODO: If match found, return dictionary with components
+    # Keys: 'timestamp', 'ip_address', 'level', 'message'
+    
+    # TODO: Return None if no match
+    pass
+
+
+def tokenize_message(message: str) -> List[str]:
+    """
+    Tokenize a log message into individual words.
+    
+    Args:
+        message: The message portion of a log line
+    
+    Returns:
+        List of tokens (words)
+    
+    Example:
+        Input: "User login successful"
+        Output: ['User', 'login', 'successful']
+    """
+    # TODO: Split message into tokens
+    # Hint: Use split() method and handle extra whitespace
+    
+    # TODO: Return list of non-empty tokens
+    pass
+
+
+def extract_timestamp_components(timestamp_str: str) -> Dict[str, int]:
+    """
+    Extract date and time components from timestamp string.
+    
+    Args:
+        timestamp_str: Timestamp in format "YYYY-MM-DD HH:MM:SS"
+    
+    Returns:
+        Dictionary with year, month, day, hour, minute, second
+    
+    Example:
+        Input: "2024-01-15 10:23:45"
+        Output: {'year': 2024, 'month': 1, 'day': 15, 
+                 'hour': 10, 'minute': 23, 'second': 45}
+    """
+    # TODO: Parse timestamp string using datetime.strptime()
+    # Format string: "%Y-%m-%d %H:%M:%S"
+    
+    # TODO: Extract components and return as dictionary
+    pass
+
+
+def validate_ip_address(ip: str) -> bool:
+    """
+    Validate if string is a valid IPv4 address.
+    
+    Args:
+        ip: IP address string to validate
+    
+    Returns:
+        True if valid IPv4, False otherwise
+    
+    Example:
+        Input: "192.168.1.100"
+        Output: True
+    """
+    # TODO: Create regex pattern for IPv4 validation
+    # Pattern should match: 0-255.0-255.0-255.0-255
+    
+    # TODO: Return True if pattern matches, False otherwise
+    pass
+
+
+def parse_log_file(filename: str) -> List[Dict[str, str]]:
+    """
+    Parse entire log file and return list of parsed entries.
+    
+    Args:
+        filename: Path to log file
+    
+    Returns:
+        List of dictionaries, each containing parsed log entry
+    """
+    parsed_logs = []
+    
+    # TODO: Open and read file line by line
+    # Hint: Use 'with open(filename, 'r') as f:'
+    
+    # TODO: For each line, call parse_log_line()
+    
+    # TODO: If parsing successful, append to parsed_logs list
+    
+    # TODO: Return list of parsed entries
+    pass
+
+
+def filter_by_level(parsed_logs: List[Dict], level: str) -> List[Dict]:
+    """
+    Filter log entries by severity level.
+    
+    Args:
+        parsed_logs: List of parsed log dictionaries
+        level: Level to filter (INFO, WARNING, ERROR)
+    
+    Returns:
+        Filtered list of log entries
+    """
+    # TODO: Filter parsed_logs where 'level' matches parameter
+    # Hint: Use list comprehension
+    pass
+
+
+def main():
+    """
+    Main function to demonstrate log parsing functionality.
+    """
+    print("=== Log Parser Utility ===\n")
+    
+    # TODO: Parse the sample.log file
+    
+    # TODO: Display total number of entries parsed
+    
+    # TODO: Display first 3 parsed entries
+    
+    # TODO: Filter and display ERROR level entries
+    
+    # TODO: For each entry, tokenize the message and display tokens
+
+
+if __name__ == "__main__":
+    main()
+Save and exit (Ctrl+X, Y, Enter).
+
+Step 2: Implement Core Functions
+Complete the TODO sections in the script. Here are hints for each function:
+
+parse_log_line():
+
+match = re.match(pattern, line)
+if match:
+    return {
+        'timestamp': f"{match.group(1)} {match.group(2)}",
+        'ip_address': match.group(3),
+        'level': match.group(4),
+        'message': match.group(5)
+    }
+return None
+tokenize_message():
+
+tokens = message.split()
+return [token for token in tokens if token]
+extract_timestamp_components():
+
+dt = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+return {
+    'year': dt.year,
+    'month': dt.month,
+    'day': dt.day,
+    'hour': dt.hour,
+    'minute': dt.minute,
+    'second': dt.second
+}
+validate_ip_address():
+
+pattern = r'^(\d{1,3}\.){3}\d{1,3}$'
+if re.match(pattern, ip):
+    parts = ip.split('.')
+    return all(0 <= int(part) <= 255 for part in parts)
+return False
+Step 3: Test Your Parser
+# Make script executable
+chmod +x log_parser.py
+
+# Run the parser
+python3 log_parser.py
+Expected output should show parsed log entries with extracted components.
+
+Task 2: Advanced Parsing Features
+Step 1: Create Enhanced Parser
+Create a new script with additional features:
+
+nano advanced_parser.py
+#!/usr/bin/env python3
+"""
+Advanced Log Parser with Statistics
+"""
+
+import re
+from collections import Counter
+from datetime import datetime
+from typing import Dict, List
+
+# Import functions from log_parser.py or redefine them here
+
+def generate_statistics(parsed_logs: List[Dict]) -> Dict:
+    """
+    Generate statistics from parsed logs.
+    
+    Returns:
+        Dictionary containing:
+        - total_entries: Total number of log entries
+        - level_counts: Count of each log level
+        - unique_ips: Number of unique IP addresses
+        - top_ips: Most frequent IP addresses
+    """
+    # TODO: Count total entries
+    
+    # TODO: Count occurrences of each level (INFO, WARNING, ERROR)
+    # Hint: Use Counter from collections
+    
+    # TODO: Extract unique IP addresses
+    
+    # TODO: Find top 3 most frequent IPs
+    
+    pass
+
+
+def extract_ip_addresses(parsed_logs: List[Dict]) -> List[str]:
+    """
+    Extract all IP addresses from parsed logs.
+    
+    Args:
+        parsed_logs: List of parsed log dictionaries
+    
+    Returns:
+        List of IP addresses
+    """
+    # TODO: Extract 'ip_address' from each log entry
+    pass
+
+
+def search_logs(parsed_logs: List[Dict], keyword: str) -> List[Dict]:
+    """
+    Search logs for entries containing keyword in message.
+    
+    Args:
+        parsed_logs: List of parsed log dictionaries
+        keyword: Search term
+    
+    Returns:
+        List of matching log entries
+    """
+    # TODO: Filter logs where keyword appears in message
+    # Make search case-insensitive
+    pass
+
+
+def export_to_csv(parsed_logs: List[Dict], output_file: str):
+    """
+    Export parsed logs to CSV format.
+    
+    Args:
+        parsed_logs: List of parsed log dictionaries
+        output_file: Output CSV filename
+    """
+    # TODO: Open output file for writing
+    
+    # TODO: Write CSV header: timestamp,ip_address,level,message
+    
+    # TODO: Write each log entry as CSV row
+    
+    pass
+
+
+def main():
+    print("=== Advanced Log Parser ===\n")
+    
+    # TODO: Parse sample.log
+    
+    # TODO: Generate and display statistics
+    
+    # TODO: Search for specific keyword (e.g., "login")
+    
+    # TODO: Export results to CSV
+    
+    print("\nProcessing complete!")
+
+
+if __name__ == "__main__":
+    main()
+Step 2: Implement Statistics Functions
+Complete the advanced functions. Key implementations:
+
+generate_statistics():
+
+stats = {
+    'total_entries': len(parsed_logs),
+    'level_counts': Counter(log['level'] for log in parsed_logs),
+    'unique_ips': len(set(log['ip_address'] for log in parsed_logs)),
+    'top_ips': Counter(log['ip_address'] for log in parsed_logs).most_common(3)
+}
+return stats
+Step 3: Test Advanced Features
+python3 advanced_parser.py
+
+# Verify CSV output was created
+cat output.csv
+Verification
+Test 1: Basic Parsing
+# Test individual log line parsing
+python3 -c "
+from log_parser import parse_log_line
+line = '2024-01-15 10:23:45 192.168.1.100 INFO User login successful'
+result = parse_log_line(line)
+print(result)
+"
+Expected: Dictionary with timestamp, IP, level, and message.
+
+Test 2: IP Validation
+# Test IP address validation
+python3 -c "
+from log_parser import validate_ip_address
+print(validate_ip_address('192.168.1.100'))  # Should be True
+print(validate_ip_address('999.999.999.999'))  # Should be False
+"
+Test 3: Complete File Processing
+# Verify all logs were parsed
+python3 -c "
+from log_parser import parse_log_file
+logs = parse_log_file('sample.log')
+print(f'Parsed {len(logs)} log entries')
+print(f'First entry: {logs[0]}')
+"
+Expected: 8 entries parsed successfully.
+
+Test 4: Statistics Generation
+# Check statistics output
+python3 advanced_parser.py | grep -A 5 "Statistics"
+Troubleshooting
+Issue: Regex not matching
+
+Verify log format matches pattern exactly
+Check for extra spaces or tabs
+Test regex at regex101.com
+Issue: Import errors
+
+Ensure both scripts are in same directory
+Check Python path: echo $PYTHONPATH
+Issue: File not found
+
+Verify you're in correct directory: pwd
+Check file exists: ls -la sample.log
+Issue: Invalid IP detection
+
+Test IP validation function separately
+Verify regex pattern for IPv4 format
+Conclusion
+You have successfully built a log parsing utility that:
+
+Parses structured log files into components
+Extracts timestamps, IP addresses, and severity levels
+Tokenizes log messages for analysis
+Validates IP addresses
+Generates statistics from log data
+Exports results to CSV format
+Key Skills Acquired:
+
+Regular expression pattern matching
+String parsing and tokenization
+Data structure manipulation
+File I/O operations
+Log analysis fundamentals
+Real-World Applications:
+
+Security incident investigation
+System monitoring and alerting
+Compliance auditing
+Performance troubleshooting
+Automated log analysis pipelines
+This foundational skill is essential for cybersecurity professionals who regularly analyze system logs, detect anomalies, and investigate security events.
