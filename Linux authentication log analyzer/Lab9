@@ -1,0 +1,368 @@
+Linux Authentication Log Analyzer
+Prerequisites
+Basic Linux command line knowledge (cd, ls, cat)
+Understanding of text files and file paths
+Familiarity with basic text searching concepts
+SSH access to a Linux machine
+Learning Objectives
+By completing this lab, you will:
+
+Understand Linux authentication log structure and location
+Parse and analyze auth.log files for security events
+Detect failed login attempts and patterns
+Identify successful authentication events
+Recognize suspicious activity indicators
+Create basic security monitoring scripts
+Environment Setup
+Step 1: Access Your Lab Machine
+Click the Start Lab button to provision your Linux cloud machine. Once ready, connect via SSH using the provided credentials.
+
+Step 2: Verify Log Access
+Check that authentication logs are accessible:
+
+sudo ls -lh /var/log/auth.log*
+You should see auth.log and possibly rotated logs (auth.log.1, etc.).
+
+Step 3: Install Required Tools
+Most tools are pre-installed, but verify:
+
+which grep awk sed
+All three commands should return paths. These are standard on Linux systems.
+
+Step 4: Create Working Directory
+mkdir ~/log-analysis
+cd ~/log-analysis
+Task 1: Understanding Authentication Logs
+Step 1: Examine Log Structure
+View recent authentication events:
+
+sudo tail -n 20 /var/log/auth.log
+Key log components:
+
+Timestamp (e.g., Dec 15 10:23:45)
+Hostname
+Service (sshd, sudo, login, etc.)
+Process ID [PID]
+Event message
+Step 2: Generate Test Authentication Events
+Create some login activity for analysis:
+
+# This will fail intentionally - creates a failed login entry
+su - nonexistentuser
+
+# Check sudo access - creates successful sudo entry
+sudo whoami
+Step 3: View Your Generated Events
+sudo tail -n 5 /var/log/auth.log
+You should see the events you just created.
+
+Task 2: Detecting Failed Login Attempts
+Step 1: Search for Failed Password Attempts
+sudo grep "Failed password" /var/log/auth.log
+This shows all failed password attempts with usernames and source IPs.
+
+Step 2: Count Failed Attempts by User
+sudo grep "Failed password" /var/log/auth.log | awk '{print $(NF-5)}' | sort | uniq -c | sort -rn
+Command breakdown:
+
+grep: Finds failed password lines
+awk '{print $(NF-5)}': Extracts username (5th field from end)
+sort | uniq -c: Counts occurrences
+sort -rn: Sorts by count (highest first)
+Step 3: Identify Source IPs of Failed Attempts
+sudo grep "Failed password" /var/log/auth.log | awk '{print $(NF-3)}' | sort | uniq -c | sort -rn
+This shows which IP addresses have the most failed attempts.
+
+Step 4: Create Failed Login Report Script
+Create a script to automate failed login detection:
+
+nano failed_logins.sh
+Add this content:
+
+#!/bin/bash
+# Failed Login Analyzer
+# TODO: Add date parameter support
+
+echo "=== Failed Login Attempts Report ==="
+echo "Generated: $(date)"
+echo ""
+
+# TODO: Count total failed attempts
+echo "Total Failed Attempts:"
+sudo grep "Failed password" /var/log/auth.log | wc -l
+
+echo ""
+echo "Top 10 Usernames Targeted:"
+# TODO: Extract and count usernames from failed attempts
+sudo grep "Failed password" /var/log/auth.log | awk '{print $(NF-5)}' | sort | uniq -c | sort -rn | head -10
+
+echo ""
+echo "Top 10 Source IPs:"
+# TODO: Extract and count source IPs
+sudo grep "Failed password" /var/log/auth.log | awk '{print $(NF-3)}' | sort | uniq -c | sort -rn | head -10
+Make executable and run:
+
+chmod +x failed_logins.sh
+./failed_logins.sh
+Task 3: Analyzing Successful Logins
+Step 1: Find Successful SSH Logins
+sudo grep "Accepted password\|Accepted publickey" /var/log/auth.log
+This shows successful authentications via password or SSH key.
+
+Step 2: Extract Successful Login Details
+sudo grep "Accepted" /var/log/auth.log | awk '{print $1, $2, $3, $9, $11}'
+Shows: Month, Day, Time, Username, Source IP
+
+Step 3: List Unique Users Who Logged In
+sudo grep "Accepted" /var/log/auth.log | awk '{print $9}' | sort -u
+Step 4: Create Successful Login Report Script
+nano successful_logins.sh
+Add this content:
+
+#!/bin/bash
+# Successful Login Analyzer
+
+echo "=== Successful Login Report ==="
+echo "Generated: $(date)"
+echo ""
+
+# TODO: Count total successful logins
+echo "Total Successful Logins:"
+sudo grep "Accepted" /var/log/auth.log | wc -l
+
+echo ""
+echo "Users Who Logged In:"
+# TODO: List unique usernames
+sudo grep "Accepted" /var/log/auth.log | awk '{print $9}' | sort -u
+
+echo ""
+echo "Recent 10 Successful Logins:"
+# TODO: Show last 10 successful logins with details
+sudo grep "Accepted" /var/log/auth.log | tail -10 | awk '{print $1, $2, $3, $9, "from", $11}'
+Make executable and run:
+
+chmod +x successful_logins.sh
+./successful_logins.sh
+Task 4: Detecting Suspicious Activity
+Step 1: Identify Brute Force Patterns
+Find IPs with more than 5 failed attempts:
+
+sudo grep "Failed password" /var/log/auth.log | awk '{print $(NF-3)}' | sort | uniq -c | sort -rn | awk '$1 > 5'
+Step 2: Detect Invalid User Attempts
+sudo grep "Invalid user" /var/log/auth.log | head -20
+These are attempts to log in as non-existent users (common attack pattern).
+
+Step 3: Find Root Login Attempts
+sudo grep "Failed password for root" /var/log/auth.log
+Direct root login attempts are highly suspicious.
+
+Step 4: Check for Unusual Login Times
+View login times to spot off-hours access:
+
+sudo grep "Accepted" /var/log/auth.log | awk '{print $3}' | cut -d: -f1 | sort | uniq -c
+Shows login distribution by hour.
+
+Step 5: Create Comprehensive Security Alert Script
+nano security_alerts.sh
+Add this content:
+
+#!/bin/bash
+# Security Alert Analyzer
+# Detects suspicious authentication patterns
+
+THRESHOLD=5  # Failed attempts threshold
+
+echo "=== SECURITY ALERTS ==="
+echo "Generated: $(date)"
+echo ""
+
+# Alert 1: Brute Force Detection
+echo "[ALERT] IPs with more than $THRESHOLD failed attempts:"
+# TODO: Find IPs exceeding threshold
+sudo grep "Failed password" /var/log/auth.log | awk '{print $(NF-3)}' | sort | uniq -c | sort -rn | awk -v t=$THRESHOLD '$1 > t {print $1, "attempts from", $2}'
+
+echo ""
+
+# Alert 2: Invalid User Attempts
+echo "[ALERT] Invalid user login attempts:"
+# TODO: Count invalid user attempts
+INVALID_COUNT=$(sudo grep "Invalid user" /var/log/auth.log | wc -l)
+echo "Total: $INVALID_COUNT"
+if [ $INVALID_COUNT -gt 0 ]; then
+    echo "Top targeted invalid usernames:"
+    sudo grep "Invalid user" /var/log/auth.log | awk '{print $8}' | sort | uniq -c | sort -rn | head -5
+fi
+
+echo ""
+
+# Alert 3: Root Login Attempts
+echo "[ALERT] Root login attempts:"
+# TODO: Count root login attempts
+ROOT_ATTEMPTS=$(sudo grep "Failed password for root" /var/log/auth.log | wc -l)
+echo "Failed root attempts: $ROOT_ATTEMPTS"
+
+echo ""
+
+# Alert 4: Successful Logins After Failed Attempts
+echo "[ALERT] IPs with both failed and successful logins:"
+# TODO: Find IPs that eventually succeeded after failures
+FAILED_IPS=$(sudo grep "Failed password" /var/log/auth.log | awk '{print $(NF-3)}' | sort -u)
+for ip in $FAILED_IPS; do
+    SUCCESS=$(sudo grep "Accepted.*$ip" /var/log/auth.log | wc -l)
+    if [ $SUCCESS -gt 0 ]; then
+        echo "IP $ip: Had failures but eventually succeeded"
+    fi
+done
+
+echo ""
+echo "=== END OF REPORT ==="
+Make executable and run:
+
+chmod +x security_alerts.sh
+./security_alerts.sh
+Task 5: Creating a Complete Log Analysis Dashboard
+Step 1: Build Master Analysis Script
+Combine all analyses into one comprehensive tool:
+
+nano auth_analyzer.sh
+Add this content:
+
+#!/bin/bash
+# Complete Authentication Log Analyzer
+# Usage: ./auth_analyzer.sh [logfile]
+
+LOGFILE=${1:-/var/log/auth.log}
+
+echo "========================================"
+echo "  AUTHENTICATION LOG ANALYSIS REPORT"
+echo "========================================"
+echo "Log File: $LOGFILE"
+echo "Generated: $(date)"
+echo ""
+
+# Section 1: Summary Statistics
+echo "--- SUMMARY STATISTICS ---"
+TOTAL_FAILED=$(sudo grep "Failed password" $LOGFILE | wc -l)
+TOTAL_SUCCESS=$(sudo grep "Accepted" $LOGFILE | wc -l)
+TOTAL_INVALID=$(sudo grep "Invalid user" $LOGFILE | wc -l)
+
+echo "Total Failed Attempts: $TOTAL_FAILED"
+echo "Total Successful Logins: $TOTAL_SUCCESS"
+echo "Total Invalid User Attempts: $TOTAL_INVALID"
+echo ""
+
+# Section 2: Top Attackers
+echo "--- TOP 5 ATTACKING IPs ---"
+# TODO: List top 5 IPs by failed attempts
+sudo grep "Failed password" $LOGFILE | awk '{print $(NF-3)}' | sort | uniq -c | sort -rn | head -5
+echo ""
+
+# Section 3: Targeted Accounts
+echo "--- TOP 5 TARGETED ACCOUNTS ---"
+# TODO: List top 5 usernames targeted
+sudo grep "Failed password" $LOGFILE | awk '{print $(NF-5)}' | sort | uniq -c | sort -rn | head -5
+echo ""
+
+# Section 4: Successful Logins
+echo "--- RECENT SUCCESSFUL LOGINS (Last 5) ---"
+# TODO: Show last 5 successful logins
+sudo grep "Accepted" $LOGFILE | tail -5 | awk '{print $1, $2, $3, "-", $9, "from", $11}'
+echo ""
+
+# Section 5: Security Warnings
+echo "--- SECURITY WARNINGS ---"
+# TODO: Check for root attempts
+ROOT_FAIL=$(sudo grep "Failed password for root" $LOGFILE | wc -l)
+if [ $ROOT_FAIL -gt 0 ]; then
+    echo "[WARNING] $ROOT_FAIL failed root login attempts detected!"
+fi
+
+# TODO: Check for brute force
+BRUTE_FORCE=$(sudo grep "Failed password" $LOGFILE | awk '{print $(NF-3)}' | sort | uniq -c | sort -rn | awk '$1 > 10' | wc -l)
+if [ $BRUTE_FORCE -gt 0 ]; then
+    echo "[WARNING] $BRUTE_FORCE IPs show brute force patterns (>10 attempts)!"
+fi
+
+echo ""
+echo "========================================"
+echo "  END OF REPORT"
+echo "========================================"
+Make executable and run:
+
+chmod +x auth_analyzer.sh
+./auth_analyzer.sh
+Step 2: Test with Different Time Ranges
+Analyze older logs if available:
+
+# Check for rotated logs
+sudo ls -lh /var/log/auth.log*
+
+# Analyze older log
+./auth_analyzer.sh /var/log/auth.log.1
+Verification
+Verify Script Functionality
+Check failed_logins.sh output:
+
+Should show count of failed attempts
+Should list usernames and IPs
+Numbers should be non-zero if system has activity
+Check successful_logins.sh output:
+
+Should show successful login count
+Should list users who logged in
+Should show recent login details
+Check security_alerts.sh output:
+
+Should identify high-frequency attackers
+Should flag invalid user attempts
+Should report root login attempts
+Check auth_analyzer.sh output:
+
+Should provide complete summary
+All sections should display data
+Should show security warnings if applicable
+Test Your Understanding
+Run these commands and interpret results:
+
+# How many unique IPs attempted failed logins?
+sudo grep "Failed password" /var/log/auth.log | awk '{print $(NF-3)}' | sort -u | wc -l
+
+# What's the most common hour for login attempts?
+sudo grep "Accepted\|Failed" /var/log/auth.log | awk '{print $3}' | cut -d: -f1 | sort | uniq -c | sort -rn | head -1
+
+# Which user account is most targeted?
+sudo grep "Failed password" /var/log/auth.log | awk '{print $(NF-5)}' | sort | uniq -c | sort -rn | head -1
+Troubleshooting Tips
+Issue: Permission denied when accessing logs
+
+Solution: Use sudo before grep commands
+Auth logs require root privileges
+Issue: No output from grep commands
+
+Solution: Check if log file exists: sudo ls -lh /var/log/auth.log
+Some systems use /var/log/secure instead
+Issue: Script shows "command not found"
+
+Solution: Ensure script is executable: chmod +x scriptname.sh
+Run with ./ prefix: ./scriptname.sh
+Issue: AWK field numbers seem wrong
+
+Solution: Log format varies by system
+Use awk '{print NF}' to count fields
+Adjust field numbers accordingly
+Issue: Empty results
+
+Solution: Generate activity first (try SSH login, sudo command)
+Check if logs are being written: sudo tail -f /var/log/auth.log
+Conclusion
+You have successfully created a Linux authentication log analysis toolkit. You learned to:
+
+Navigate and understand Linux authentication log structure
+Parse logs using grep, awk, and sed
+Detect failed login attempts and identify attack patterns
+Track successful authentications
+Recognize suspicious activities like brute force attacks
+Create automated security monitoring scripts
+Real-world significance: These skills are essential for cybersecurity professionals. Authentication logs are the first line of defense in detecting unauthorized access attempts, compromised accounts, and ongoing attacks. The scripts you created form the foundation of Security Information and Event Management (SIEM) systems used in production environments.
+
+Next steps: Consider expanding your scripts to send email alerts, integrate with log aggregation tools, or create scheduled cron jobs for continuous monitoring.
