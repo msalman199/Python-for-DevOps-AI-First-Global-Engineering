@@ -1,0 +1,337 @@
+ Natural-Language Requirement Functional Python Tool
+Prerequisites
+Basic Python programming knowledge (variables, functions, conditionals)
+Familiarity with Linux command line
+Understanding of string manipulation in Python
+Access to a Linux machine with internet connection
+Learning Objectives
+By completing this lab, you will:
+
+Parse simple natural language requirements into structured data
+Convert human-readable specifications into executable Python functions
+Implement basic requirement analysis logic
+Create a functional tool that bridges natural language and code
+Environment Setup
+Step 1: Access Your Lab Environment
+Click the Start Lab button to provision your Linux machine. Once ready, connect via SSH.
+
+Step 2: Install Required Tools
+# Update package manager
+sudo apt update
+
+# Install Python 3 and pip (if not already installed)
+sudo apt install -y python3 python3-pip
+
+# Verify installation
+python3 --version
+pip3 --version
+Step 3: Create Lab Directory
+# Create and navigate to lab directory
+mkdir ~/nlp-requirement-tool
+cd ~/nlp-requirement-tool
+Task 1: Build a Natural Language Requirement Parser
+Overview
+You will create a Python tool that reads simple natural language requirements and generates corresponding Python function templates. This simulates how cyber professionals translate security requirements into code.
+
+Step 1: Create the Main Script
+# Create the main Python file
+nano requirement_parser.py
+Step 2: Implement the Requirement Parser
+Copy the following starter code and complete the TODO sections:
+
+#!/usr/bin/env python3
+"""
+Natural Language Requirement to Python Function Converter
+Parses simple requirements and generates function templates
+"""
+
+import re
+import sys
+
+class RequirementParser:
+    """Parses natural language requirements into function specifications"""
+    
+    def __init__(self):
+        # Common action verbs in requirements
+        self.action_verbs = ['validate', 'check', 'verify', 'scan', 'analyze', 
+                            'filter', 'encrypt', 'decrypt', 'authenticate']
+    
+    def parse_requirement(self, requirement: str) -> dict:
+        """
+        Parse a natural language requirement into structured data.
+        
+        Args:
+            requirement: Natural language requirement string
+            
+        Returns:
+            Dictionary with function_name, action, target, and parameters
+            
+        Example:
+            Input: "validate user password strength"
+            Output: {'function_name': 'validate_user_password_strength', 
+                    'action': 'validate', 'target': 'password strength'}
+        """
+        requirement = requirement.lower().strip()
+        
+        # TODO: Extract the action verb from the requirement
+        # Hint: Check if any action_verb appears in the requirement
+        action = None
+        for verb in self.action_verbs:
+            if verb in requirement:
+                action = verb
+                break
+        
+        # TODO: Remove the action verb to get the target
+        # Hint: Use string replace to remove the action verb
+        target = requirement.replace(action, '').strip() if action else requirement
+        
+        # TODO: Create function name by replacing spaces with underscores
+        function_name = requirement.replace(' ', '_')
+        
+        return {
+            'function_name': function_name,
+            'action': action,
+            'target': target,
+            'original': requirement
+        }
+    
+    def generate_function_template(self, parsed_req: dict) -> str:
+        """
+        Generate Python function template from parsed requirement.
+        
+        Args:
+            parsed_req: Dictionary from parse_requirement()
+            
+        Returns:
+            String containing Python function template
+        """
+        function_name = parsed_req['function_name']
+        action = parsed_req['action']
+        target = parsed_req['target']
+        
+        # TODO: Build the function template string
+        # Include: function definition, docstring, and basic structure
+        template = f'''def {function_name}(input_data):
+    """
+    {action.capitalize()} {target}.
+    
+    Args:
+        input_data: Data to be processed
+        
+    Returns:
+        bool: True if {action} succeeds, False otherwise
+    """
+    # TODO: Implement {action} logic for {target}
+    result = False
+    
+    # Add your implementation here
+    
+    return result
+'''
+        return template
+
+
+def main():
+    """Main function to run the requirement parser"""
+    parser = RequirementParser()
+    
+    print("=" * 60)
+    print("Natural Language Requirement to Python Function Converter")
+    print("=" * 60)
+    
+    # TODO: Read requirements from user input or file
+    # For this lab, we'll use predefined examples
+    sample_requirements = [
+        "validate user password strength",
+        "check file permissions",
+        "scan network ports",
+        "encrypt sensitive data"
+    ]
+    
+    print("\nProcessing Requirements:\n")
+    
+    for req in sample_requirements:
+        print(f"Requirement: '{req}'")
+        
+        # TODO: Parse the requirement
+        parsed = parser.parse_requirement(req)
+        
+        print(f"  Function Name: {parsed['function_name']}")
+        print(f"  Action: {parsed['action']}")
+        print(f"  Target: {parsed['target']}")
+        
+        # TODO: Generate function template
+        template = parser.generate_function_template(parsed)
+        
+        # Save to file
+        filename = f"{parsed['function_name']}.py"
+        with open(filename, 'w') as f:
+            f.write(template)
+        
+        print(f"  Generated: {filename}\n")
+    
+    print("=" * 60)
+    print("Function templates generated successfully!")
+    print("=" * 60)
+
+
+if __name__ == "__main__":
+    main()
+Step 3: Make the Script Executable
+chmod +x requirement_parser.py
+Step 4: Run the Parser
+python3 requirement_parser.py
+Expected Output: ```
+Natural Language Requirement to Python Function Converter
+Processing Requirements:
+
+Requirement: 'validate user password strength' Function Name: validate_user_password_strength Action: validate Target: user password strength Generated: validate_user_password_strength.py
+
+Requirement: 'check file permissions' Function Name: check_file_permissions Action: check Target: file permissions Generated: check_file_permissions.py ...
+
+
+## Task 2: Implement Generated Functions
+
+### Step 1: Review Generated Templates
+
+```bash
+# List generated function files
+ls -la *.py
+
+# View one of the generated templates
+cat validate_user_password_strength.py
+Step 2: Implement a Sample Function
+Edit one of the generated templates to add actual functionality:
+
+nano validate_user_password_strength.py
+Complete the function implementation:
+
+def validate_user_password_strength(input_data):
+    """
+    Validate user password strength.
+    
+    Args:
+        input_data: Password string to validate
+        
+    Returns:
+        bool: True if validate succeeds, False otherwise
+    """
+    # TODO: Implement validate logic for user password strength
+    result = False
+    
+    # Password strength criteria
+    password = str(input_data)
+    
+    # TODO: Check minimum length (at least 8 characters)
+    has_length = len(password) >= 8
+    
+    # TODO: Check for uppercase letter
+    has_upper = any(c.isupper() for c in password)
+    
+    # TODO: Check for lowercase letter
+    has_lower = any(c.islower() for c in password)
+    
+    # TODO: Check for digit
+    has_digit = any(c.isdigit() for c in password)
+    
+    # TODO: Check for special character
+    has_special = any(not c.isalnum() for c in password)
+    
+    # All criteria must be met
+    result = all([has_length, has_upper, has_lower, has_digit, has_special])
+    
+    return result
+
+
+# Test the function
+if __name__ == "__main__":
+    test_passwords = [
+        "weak",
+        "StrongPass1!",
+        "NoSpecial123",
+        "MySecureP@ssw0rd"
+    ]
+    
+    for pwd in test_passwords:
+        is_valid = validate_user_password_strength(pwd)
+        print(f"Password: '{pwd}' - Valid: {is_valid}")
+Step 3: Test the Implementation
+python3 validate_user_password_strength.py
+Expected Output:
+
+Password: 'weak' - Valid: False
+Password: 'StrongPass1!' - Valid: True
+Password: 'NoSpecial123' - Valid: False
+Password: 'MySecureP@ssw0rd' - Valid: True
+Verification
+Step 1: Verify Parser Functionality
+# Run the main parser again
+python3 requirement_parser.py
+
+# Confirm all template files were created
+ls -1 *.py | wc -l
+# Should show 5 files (4 generated + 1 main script)
+Step 2: Verify Function Implementation
+# Test your implemented function
+python3 validate_user_password_strength.py
+
+# Check that it correctly validates passwords
+Step 3: Create Custom Requirement
+Create a test script to add your own requirement:
+
+nano test_custom_requirement.py
+Add this content:
+
+#!/usr/bin/env python3
+from requirement_parser import RequirementParser
+
+parser = RequirementParser()
+
+# Add your own requirement here
+custom_req = "verify email format"
+
+parsed = parser.parse_requirement(custom_req)
+template = parser.generate_function_template(parsed)
+
+print(f"Custom Requirement: {custom_req}")
+print(f"\nGenerated Function:\n")
+print(template)
+Run it:
+
+python3 test_custom_requirement.py
+Troubleshooting
+Issue: Module not found error
+
+Solution: Ensure you're in the correct directory (~/nlp-requirement-tool)
+Run: pwd to verify location
+Issue: Permission denied
+
+Solution: Make scripts executable with chmod +x script_name.py
+Issue: No output from parser
+
+Solution: Check that action verbs match those in the action_verbs list
+Verify requirement strings are lowercase
+Issue: Generated functions don't work
+
+Solution: Remember that generated templates are starter code only
+You must implement the actual logic in each function
+Conclusion
+You have successfully created a natural language requirement parser that converts human-readable specifications into Python function templates. This tool demonstrates:
+
+Requirement Analysis: Parsing natural language into structured data
+Code Generation: Automatically creating function templates from requirements
+Practical Application: A foundation for translating security requirements into code
+Real-World Relevance for Cyber Professionals:
+
+In cybersecurity, you often receive requirements like "validate input sanitization" or "verify authentication tokens." This lab teaches you to systematically convert such requirements into implementable code, a critical skill for security automation and compliance verification.
+
+Key Takeaways:
+
+Natural language processing basics for requirement extraction
+Automated code template generation
+Bridging communication between non-technical stakeholders and implementation
+Next Steps:
+
+Extend the parser to handle more complex requirements
+Add parameter extraction from requirements
+Implement additional generated functions with security logic
