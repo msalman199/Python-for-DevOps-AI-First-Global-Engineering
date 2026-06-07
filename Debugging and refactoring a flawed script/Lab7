@@ -1,0 +1,417 @@
+ Debugging and Refactoring a Flawed Script
+Prerequisites
+Basic understanding of Linux command line
+Familiarity with a text editor (nano, vim, or vi)
+Basic knowledge of Python or Bash scripting
+Understanding of file permissions in Linux
+Learning Objectives
+By the end of this lab, you will be able to:
+
+Identify common bugs in scripts including syntax errors, logic errors, and runtime issues
+Fix security vulnerabilities such as hardcoded credentials and command injection risks
+Refactor inefficient code to improve performance and readability
+Apply basic code quality principles to enhance maintainability
+Environment Setup
+Click the "Start Lab" button to provision your Linux machine
+Connect to your Linux machine via SSH
+Update package manager and install required tools:
+sudo apt update
+sudo apt install -y python3 python3-pip shellcheck
+Create a working directory:
+mkdir ~/debug-lab
+cd ~/debug-lab
+Task 1: Debug and Fix a Flawed Python Script
+Step 1: Create the Flawed Script
+Create a file named user_manager.py with the following buggy code:
+
+nano user_manager.py
+Copy this flawed script (contains intentional bugs):
+
+#!/usr/bin/env python3
+import os
+import sys
+
+# Hardcoded credentials (SECURITY ISSUE)
+admin_password = "admin123"
+
+def authenticate_user(username, password):
+    # Bug: Logic error in authentication
+    if username == "admin" or password == admin_password:
+        return True
+    return False
+
+def list_users():
+    # Bug: Command injection vulnerability
+    user_input = input("Enter search pattern: ")
+    command = "cat /etc/passwd | grep " + user_input
+    os.system(command)
+
+def add_user(username):
+    # Bug: No input validation
+    # Bug: Inefficient file handling
+    file = open("/tmp/users.txt", "a")
+    file.write(username)
+    file.close()
+
+def read_users():
+    # Bug: No error handling for missing file
+    file = open("/tmp/users.txt", "r")
+    users = file.read()
+    file.close()
+    return users
+
+def main():
+    print("User Management System")
+    print("1. Authenticate")
+    print("2. List system users")
+    print("3. Add user to list")
+    print("4. Read user list")
+    
+    choice = input("Enter choice: ")
+    
+    # Bug: No input validation
+    if choice == "1":
+        user = input("Username: ")
+        pwd = input("Password: ")
+        if authenticate_user(user, pwd):
+            print("Access granted")
+        else:
+            print("Access denied")
+    elif choice == "2":
+        list_users()
+    elif choice == "3":
+        name = input("Enter username: ")
+        add_user(name)
+    elif choice == "4":
+        print(read_users())
+
+if __name__ == "__main__":
+    main()
+Save and exit (Ctrl+X, Y, Enter in nano).
+
+Step 2: Identify the Bugs
+Review the script and identify these issues:
+
+Security Issues:
+
+Hardcoded password in plaintext
+Command injection vulnerability in list_users()
+No input validation allowing malicious input
+Logic Errors:
+
+Authentication uses OR instead of AND (line 9)
+Missing newline character when writing users (line 20)
+Code Quality Issues:
+
+No error handling for file operations
+Files not closed properly (no context managers)
+No input validation for menu choices
+Step 3: Create the Fixed Version
+Create a new file for the corrected script:
+
+nano user_manager_fixed.py
+Now implement the fixed version. Use this template and complete the TODO sections:
+
+#!/usr/bin/env python3
+import os
+import sys
+import hashlib
+import subprocess
+
+# TODO: Replace hardcoded password with environment variable or config file
+# Hint: Use os.environ.get() or a configuration file
+ADMIN_PASSWORD_HASH = hashlib.sha256("admin123".encode()).hexdigest()
+
+def authenticate_user(username, password):
+    """
+    Authenticate user with proper logic.
+    
+    Args:
+        username: The username to authenticate
+        password: The password to verify
+    
+    Returns:
+        bool: True if authenticated, False otherwise
+    """
+    # TODO: Fix the logic error - should use AND not OR
+    # TODO: Hash the input password and compare with stored hash
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    if username == "admin" and password_hash == ADMIN_PASSWORD_HASH:
+        return True
+    return False
+
+def list_users():
+    """
+    List system users safely without command injection.
+    """
+    # TODO: Replace os.system() with subprocess.run() for safety
+    # TODO: Use a fixed command without user input concatenation
+    try:
+        result = subprocess.run(
+            ["grep", "/bin/bash", "/etc/passwd"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        print(result.stdout)
+    except subprocess.TimeoutExpired:
+        print("Command timed out")
+    except Exception as e:
+        print(f"Error listing users: {e}")
+
+def add_user(username):
+    """
+    Add user to list with validation and proper file handling.
+    
+    Args:
+        username: The username to add
+    """
+    # TODO: Add input validation (alphanumeric only, length check)
+    if not username.isalnum() or len(username) < 3 or len(username) > 20:
+        print("Invalid username. Use 3-20 alphanumeric characters.")
+        return
+    
+    # TODO: Use context manager (with statement) for file handling
+    # TODO: Add newline character when writing
+    try:
+        with open("/tmp/users.txt", "a") as file:
+            file.write(username + "\n")
+        print(f"User '{username}' added successfully")
+    except IOError as e:
+        print(f"Error writing to file: {e}")
+
+def read_users():
+    """
+    Read users from file with error handling.
+    
+    Returns:
+        str: Contents of user file or error message
+    """
+    # TODO: Add try-except block for file not found
+    # TODO: Use context manager for file handling
+    try:
+        with open("/tmp/users.txt", "r") as file:
+            users = file.read()
+        return users if users else "No users found"
+    except FileNotFoundError:
+        return "User file not found. Add users first."
+    except IOError as e:
+        return f"Error reading file: {e}"
+
+def main():
+    """Main function with input validation."""
+    print("User Management System (Secure Version)")
+    print("1. Authenticate")
+    print("2. List system users")
+    print("3. Add user to list")
+    print("4. Read user list")
+    print("5. Exit")
+    
+    # TODO: Add input validation for menu choice
+    choice = input("Enter choice (1-5): ").strip()
+    
+    if not choice.isdigit() or int(choice) not in range(1, 6):
+        print("Invalid choice. Please enter 1-5.")
+        return
+    
+    choice = int(choice)
+    
+    if choice == 1:
+        user = input("Username: ").strip()
+        pwd = input("Password: ").strip()
+        if authenticate_user(user, pwd):
+            print("Access granted")
+        else:
+            print("Access denied")
+    elif choice == 2:
+        list_users()
+    elif choice == 3:
+        name = input("Enter username: ").strip()
+        add_user(name)
+    elif choice == 4:
+        print(read_users())
+    elif choice == 5:
+        print("Exiting...")
+        sys.exit(0)
+
+if __name__ == "__main__":
+    main()
+Save and exit.
+
+Step 4: Test Both Versions
+Test the original buggy script:
+
+chmod +x user_manager.py
+python3 user_manager.py
+Try these test cases:
+
+Choice 1: Username "admin", Password "wrong" (should fail but grants access due to OR bug)
+Choice 2: Enter ; ls -la as search pattern (demonstrates command injection)
+Test the fixed version:
+
+chmod +x user_manager_fixed.py
+python3 user_manager_fixed.py
+Try the same test cases and observe the improvements.
+
+Task 2: Debug and Refactor a Bash Script
+Step 1: Create a Flawed Bash Script
+Create a file named backup_script.sh:
+
+nano backup_script.sh
+Add this buggy script:
+
+#!/bin/bash
+
+# Flawed backup script with multiple issues
+
+backup_dir=/tmp/backups
+source_dir=$1
+
+# Bug: No input validation
+# Bug: No directory existence check
+mkdir $backup_dir
+
+# Bug: Unquoted variables (word splitting issue)
+# Bug: No error checking
+cp -r $source_dir $backup_dir
+
+# Bug: Command substitution without error handling
+timestamp=$(date +%Y%m%d)
+mv $backup_dir/$(basename $source_dir) $backup_dir/backup_$timestamp
+
+# Bug: Hardcoded password in script
+echo "Backup complete. Password: backup123" > $backup_dir/backup.log
+
+echo "Backup completed"
+Save and exit.
+
+Step 2: Analyze with ShellCheck
+Use ShellCheck to identify issues:
+
+shellcheck backup_script.sh
+Review the warnings and errors reported.
+
+Step 3: Create the Fixed Version
+Create the refactored script:
+
+nano backup_script_fixed.sh
+Complete this improved version:
+
+#!/bin/bash
+
+# Improved backup script with error handling and security fixes
+
+set -euo pipefail  # Exit on error, undefined variables, pipe failures
+
+# TODO: Add input validation
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <source_directory>"
+    exit 1
+fi
+
+readonly BACKUP_DIR="/tmp/backups"
+readonly SOURCE_DIR="$1"
+
+# TODO: Validate source directory exists
+if [ ! -d "$SOURCE_DIR" ]; then
+    echo "Error: Source directory '$SOURCE_DIR' does not exist"
+    exit 1
+fi
+
+# TODO: Create backup directory with error checking
+if ! mkdir -p "$BACKUP_DIR"; then
+    echo "Error: Failed to create backup directory"
+    exit 1
+fi
+
+# TODO: Use quoted variables to prevent word splitting
+# TODO: Add error checking for copy operation
+if ! cp -r "$SOURCE_DIR" "$BACKUP_DIR"; then
+    echo "Error: Failed to copy files"
+    exit 1
+fi
+
+# TODO: Add error handling for date command
+timestamp=$(date +%Y%m%d) || {
+    echo "Error: Failed to generate timestamp"
+    exit 1
+}
+
+# TODO: Use basename safely with quotes
+source_basename=$(basename "$SOURCE_DIR")
+if ! mv "$BACKUP_DIR/$source_basename" "$BACKUP_DIR/backup_$timestamp"; then
+    echo "Error: Failed to rename backup"
+    exit 1
+fi
+
+# TODO: Remove hardcoded password, use proper logging
+echo "Backup completed at $(date)" >> "$BACKUP_DIR/backup.log"
+echo "Backup location: $BACKUP_DIR/backup_$timestamp"
+
+echo "Backup completed successfully"
+exit 0
+Save and exit.
+
+Step 4: Test the Fixed Script
+Make both scripts executable:
+
+chmod +x backup_script.sh backup_script_fixed.sh
+Create a test directory:
+
+mkdir -p ~/test_backup
+echo "test file" > ~/test_backup/test.txt
+Test the fixed version:
+
+./backup_script_fixed.sh ~/test_backup
+Verify the backup:
+
+ls -la /tmp/backups/
+cat /tmp/backups/backup.log
+Test error handling:
+
+./backup_script_fixed.sh /nonexistent/directory
+Verification
+Verify Python Script Improvements
+Confirm authentication logic is fixed:
+# Should deny access with wrong password
+echo -e "1\nadmin\nwrong" | python3 user_manager_fixed.py
+Verify command injection is prevented:
+# Should not execute arbitrary commands
+echo -e "2" | python3 user_manager_fixed.py
+Check input validation:
+# Should reject invalid usernames
+echo -e "3\nuser@123" | python3 user_manager_fixed.py
+Verify Bash Script Improvements
+Run ShellCheck on fixed version:
+shellcheck backup_script_fixed.sh
+Expected: No errors or significantly fewer warnings.
+
+Verify error handling:
+./backup_script_fixed.sh
+# Should show usage message
+Confirm successful backup:
+ls /tmp/backups/backup_*/test.txt
+Troubleshooting Tips
+Python script issues:
+
+If import errors occur, ensure Python 3 is installed: python3 --version
+For permission errors with /tmp/users.txt, check file permissions: ls -l /tmp/users.txt
+Bash script issues:
+
+If "command not found" appears, verify script is executable: ls -l backup_script_fixed.sh
+For ShellCheck not found: sudo apt install shellcheck
+General debugging:
+
+Add set -x at the start of bash scripts to see command execution
+Use python3 -m pdb script.py for Python debugging
+Check system logs: journalctl -xe or dmesg
+Conclusion
+In this lab, you successfully:
+
+Identified and fixed critical security vulnerabilities including hardcoded credentials and command injection
+Corrected logic errors that caused authentication bypass
+Refactored code to use proper error handling and context managers
+Applied input validation to prevent malicious input
+Used static analysis tools like ShellCheck to identify code issues
+Improved code readability and maintainability through better structure
+These debugging and refactoring skills are essential for cybersecurity professionals to identify vulnerabilities in existing code, improve security posture, and maintain secure systems. The techniques learned here apply to security audits, code reviews, and incident response scenarios where you must quickly identify and remediate security issues in production scripts.
