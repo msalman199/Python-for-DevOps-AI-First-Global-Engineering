@@ -1,0 +1,278 @@
+ File Integrity and Checksum Verification Tool
+Prerequisites
+Basic Linux command line knowledge
+Understanding of file systems and file operations
+Familiarity with text editors (nano or vi)
+Access to a Linux terminal
+Learning Objectives
+By completing this lab, you will:
+
+Understand what checksums are and why they matter for file integrity
+Generate SHA256 and MD5 hashes for files
+Compare hash values to verify file integrity
+Detect when files have been modified or corrupted
+Build a simple bash script to automate checksum verification
+Environment Setup
+After clicking the "Start Lab" button, you'll have access to a bare-metal Linux machine. All tools needed for this lab are pre-installed on most Linux distributions.
+
+Verify Required Tools
+# Check if sha256sum is available
+which sha256sum
+
+# Check if md5sum is available
+which md5sum
+
+# Both should return paths like /usr/bin/sha256sum
+If any tools are missing, install them:
+
+sudo apt-get update
+sudo apt-get install coreutils -y
+Task 1: Understanding Checksums and Generating Hashes
+What is a Checksum?
+A checksum is a unique string of characters (hash) generated from a file's contents. Even a tiny change in the file produces a completely different hash. This makes checksums perfect for verifying file integrity.
+
+Step 1: Create Test Files
+Create a working directory and sample files:
+
+# Create lab directory
+mkdir ~/checksum-lab
+cd ~/checksum-lab
+
+# Create a sample text file
+echo "This is my original file content." > original.txt
+
+# Create a second file
+echo "Important data for verification." > document.txt
+Step 2: Generate SHA256 Checksums
+SHA256 is a cryptographic hash function that produces a 256-bit (64 character) hash value.
+
+# Generate SHA256 hash for original.txt
+sha256sum original.txt
+
+# Save the hash to a file for later comparison
+sha256sum original.txt > original.sha256
+
+# View the saved hash
+cat original.sha256
+Expected Output Format:
+
+a1b2c3d4e5f6... original.txt
+Step 3: Generate MD5 Checksums
+MD5 is an older hash function that produces a 128-bit (32 character) hash. It's faster but less secure than SHA256.
+
+# Generate MD5 hash for original.txt
+md5sum original.txt
+
+# Save the hash
+md5sum original.txt > original.md5
+
+# View the saved hash
+cat original.md5
+Step 4: Generate Hashes for Multiple Files
+# Generate SHA256 for all text files
+sha256sum *.txt > all-files.sha256
+
+# View the checksum file
+cat all-files.sha256
+Task 2: Verifying File Integrity and Detecting Changes
+Step 1: Verify Files Using Saved Checksums
+The -c flag checks files against saved checksums:
+
+# Verify original.txt hasn't changed
+sha256sum -c original.sha256
+
+# Verify all files
+sha256sum -c all-files.sha256
+Expected Output:
+
+original.txt: OK
+document.txt: OK
+Step 2: Detect File Modifications
+Now let's modify a file and see what happens:
+
+# Modify the original file
+echo "This file has been tampered with!" >> original.txt
+
+# Try to verify again
+sha256sum -c original.sha256
+Expected Output:
+
+original.txt: FAILED
+sha256sum: WARNING: 1 computed checksum did NOT match
+This shows the file has been changed!
+
+Step 3: Compare Hashes Manually
+# Generate new hash for modified file
+sha256sum original.txt
+
+# Compare with original hash
+cat original.sha256
+
+# The hashes will be completely different
+Step 4: Restore and Verify
+# Restore original content
+echo "This is my original file content." > original.txt
+
+# Verify it matches
+sha256sum -c original.sha256
+Task 3: Build a Simple Integrity Checker Script
+Create a bash script to automate checksum verification.
+
+Step 1: Create the Script Template
+# Create the script file
+nano integrity-checker.sh
+Add this starter code:
+
+#!/bin/bash
+
+# File Integrity Checker Script
+# This script generates and verifies file checksums
+
+# TODO: Add function to generate checksums
+generate_checksums() {
+    local directory="$1"
+    local output_file="checksums.sha256"
+    
+    # TODO: Generate SHA256 for all files in directory
+    # Hint: Use find command to locate files, then sha256sum
+    
+    echo "Checksums saved to $output_file"
+}
+
+# TODO: Add function to verify checksums
+verify_checksums() {
+    local checksum_file="$1"
+    
+    # TODO: Verify files against saved checksums
+    # Hint: Use sha256sum -c command
+    
+}
+
+# Main script logic
+case "$1" in
+    generate)
+        # TODO: Call generate_checksums function
+        ;;
+    verify)
+        # TODO: Call verify_checksums function
+        ;;
+    *)
+        echo "Usage: $0 {generate|verify}"
+        exit 1
+        ;;
+esac
+Step 2: Complete the Script
+Here's the completed version for reference:
+
+#!/bin/bash
+
+# File Integrity Checker Script
+
+generate_checksums() {
+    local directory="${1:-.}"
+    local output_file="checksums.sha256"
+    
+    echo "Generating checksums for files in $directory..."
+    find "$directory" -type f -name "*.txt" -exec sha256sum {} \; > "$output_file"
+    echo "Checksums saved to $output_file"
+}
+
+verify_checksums() {
+    local checksum_file="${1:-checksums.sha256}"
+    
+    if [ ! -f "$checksum_file" ]; then
+        echo "Error: Checksum file not found!"
+        exit 1
+    fi
+    
+    echo "Verifying file integrity..."
+    sha256sum -c "$checksum_file"
+}
+
+case "$1" in
+    generate)
+        generate_checksums "$2"
+        ;;
+    verify)
+        verify_checksums "$2"
+        ;;
+    *)
+        echo "Usage: $0 {generate|verify} [path]"
+        exit 1
+        ;;
+esac
+Step 3: Test Your Script
+# Make script executable
+chmod +x integrity-checker.sh
+
+# Generate checksums for current directory
+./integrity-checker.sh generate
+
+# Verify all files
+./integrity-checker.sh verify
+
+# Modify a file
+echo "Modified" >> document.txt
+
+# Verify again - should show failure
+./integrity-checker.sh verify
+Verification
+Confirm your lab completion by running these checks:
+
+Check 1: Verify Checksum Generation
+cd ~/checksum-lab
+
+# Should show hash and filename
+sha256sum original.txt
+md5sum original.txt
+Check 2: Verify Detection Works
+# Create test file
+echo "test" > test.txt
+sha256sum test.txt > test.sha256
+
+# Modify file
+echo "changed" >> test.txt
+
+# Should show FAILED
+sha256sum -c test.sha256
+Check 3: Verify Script Functionality
+# Script should exist and be executable
+ls -l integrity-checker.sh
+
+# Should generate checksums
+./integrity-checker.sh generate
+
+# Should verify files
+./integrity-checker.sh verify
+Troubleshooting Tips
+Problem: Command not found errors
+
+Solution: Install coreutils package: sudo apt-get install coreutils
+Problem: Permission denied when running script
+
+Solution: Make script executable: chmod +x integrity-checker.sh
+Problem: Checksum file not found
+
+Solution: Ensure you're in the correct directory: pwd and ls -la
+Problem: All files show FAILED
+
+Solution: Check if checksum file paths match current directory structure
+Conclusion
+Congratulations! You've successfully completed the File Integrity and Checksum Verification lab.
+
+What You Accomplished:
+Generated SHA256 and MD5 checksums for files
+Verified file integrity using saved checksums
+Detected file modifications through hash comparison
+Created an automated integrity checking script
+Real-World Applications:
+Software Distribution: Verify downloaded files haven't been tampered with
+Backup Verification: Ensure backup files match originals
+Security Monitoring: Detect unauthorized file modifications
+Data Transfer: Confirm files weren't corrupted during transfer
+Key Takeaways:
+Checksums provide a reliable way to verify file integrity
+Even tiny changes produce completely different hashes
+SHA256 is more secure than MD5 for critical applications
+Automation through scripts makes integrity checking efficient
+This skill is fundamental for cybersecurity professionals who need to ensure data integrity and detect unauthorized chang
