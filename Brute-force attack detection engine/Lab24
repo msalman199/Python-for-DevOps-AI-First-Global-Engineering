@@ -1,0 +1,395 @@
+Brute-force Attack Detection Engine
+Prerequisites
+Basic Linux command line knowledge
+Understanding of file operations (reading, writing)
+Familiarity with Python basics (variables, loops, conditionals)
+Basic understanding of authentication concepts (usernames, passwords)
+Learning Objectives
+By completing this lab, you will:
+
+Analyze authentication log files for suspicious activity
+Detect brute-force attack patterns based on failed login attempts
+Implement an alert system for potential security threats
+Understand how security monitoring tools identify malicious behavior
+Environment Setup
+Step 1: Prepare Your Linux Machine
+After clicking "Start Lab", you'll have access to a bare-metal Linux machine. Connect via SSH and update your system:
+
+sudo apt update
+sudo apt install -y python3 python3-pip
+Step 2: Create Lab Directory
+mkdir ~/brute-force-lab
+cd ~/brute-force-lab
+Step 3: Generate Sample Authentication Logs
+Create a sample log file to simulate authentication attempts:
+
+cat > auth.log << 'EOF'
+2024-01-15 10:23:45 SUCCESS user=alice ip=192.168.1.100
+2024-01-15 10:24:12 FAILED user=admin ip=203.0.113.45
+2024-01-15 10:24:18 FAILED user=admin ip=203.0.113.45
+2024-01-15 10:24:25 FAILED user=admin ip=203.0.113.45
+2024-01-15 10:24:31 FAILED user=admin ip=203.0.113.45
+2024-01-15 10:24:38 FAILED user=admin ip=203.0.113.45
+2024-01-15 10:25:02 SUCCESS user=bob ip=192.168.1.101
+2024-01-15 10:25:45 FAILED user=root ip=198.51.100.23
+2024-01-15 10:25:52 FAILED user=root ip=198.51.100.23
+2024-01-15 10:26:01 FAILED user=root ip=198.51.100.23
+2024-01-15 10:26:08 FAILED user=root ip=198.51.100.23
+2024-01-15 10:27:15 SUCCESS user=charlie ip=192.168.1.102
+2024-01-15 10:28:33 FAILED user=admin ip=203.0.113.45
+2024-01-15 10:28:40 FAILED user=admin ip=203.0.113.45
+2024-01-15 10:28:47 FAILED user=admin ip=203.0.113.45
+EOF
+Task 1: Build the Log Parser
+Create a Python script to parse authentication logs and extract relevant information.
+
+Step 1: Create the Main Script
+nano detector.py
+Step 2: Implement the Log Parser
+Copy this starter code and complete the TODO sections:
+
+#!/usr/bin/env python3
+"""
+Brute-force Attack Detection Engine
+Analyzes authentication logs to detect suspicious login patterns
+"""
+
+from datetime import datetime
+from collections import defaultdict
+
+class BruteForceDetector:
+    """
+    Detects brute-force attacks by analyzing failed login attempts
+    """
+    
+    def __init__(self, threshold=5, time_window=300):
+        """
+        Initialize the detector with configurable parameters
+        
+        Args:
+            threshold: Number of failed attempts to trigger alert (default: 5)
+            time_window: Time window in seconds to check attempts (default: 300)
+        """
+        self.threshold = threshold
+        self.time_window = time_window
+        # Dictionary to store failed attempts per IP address
+        self.failed_attempts = defaultdict(list)
+        self.alerts = []
+    
+    def parse_log_line(self, line):
+        """
+        Parse a single log line and extract components
+        
+        Args:
+            line: String containing log entry
+            
+        Returns:
+            Dictionary with timestamp, status, user, and ip
+            Returns None if line cannot be parsed
+        """
+        # TODO: Split the line into parts
+        # Expected format: "2024-01-15 10:23:45 SUCCESS user=alice ip=192.168.1.100"
+        parts = line.strip().split()
+        
+        if len(parts) < 5:
+            return None
+        
+        try:
+            # TODO: Extract timestamp (combine date and time)
+            timestamp_str = f"{parts[0]} {parts[1]}"
+            timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+            
+            # TODO: Extract status (SUCCESS or FAILED)
+            status = parts[2]
+            
+            # TODO: Extract username (remove "user=" prefix)
+            user = parts[3].split('=')[1]
+            
+            # TODO: Extract IP address (remove "ip=" prefix)
+            ip = parts[4].split('=')[1]
+            
+            return {
+                'timestamp': timestamp,
+                'status': status,
+                'user': user,
+                'ip': ip
+            }
+        except Exception as e:
+            print(f"Error parsing line: {line.strip()} - {e}")
+            return None
+    
+    def analyze_attempt(self, log_entry):
+        """
+        Analyze a single login attempt for brute-force patterns
+        
+        Args:
+            log_entry: Dictionary containing parsed log information
+        """
+        if log_entry is None:
+            return
+        
+        # TODO: Only track FAILED attempts
+        if log_entry['status'] == 'FAILED':
+            ip = log_entry['ip']
+            timestamp = log_entry['timestamp']
+            
+            # TODO: Add this failed attempt to the list for this IP
+            self.failed_attempts[ip].append({
+                'timestamp': timestamp,
+                'user': log_entry['user']
+            })
+            
+            # TODO: Check if this IP has exceeded the threshold
+            self.check_for_attack(ip)
+    
+    def check_for_attack(self, ip):
+        """
+        Check if an IP address shows brute-force attack patterns
+        
+        Args:
+            ip: IP address to check
+        """
+        attempts = self.failed_attempts[ip]
+        
+        if len(attempts) < self.threshold:
+            return
+        
+        # TODO: Get the most recent attempts
+        recent_attempts = attempts[-self.threshold:]
+        
+        # TODO: Calculate time difference between first and last attempt
+        first_time = recent_attempts[0]['timestamp']
+        last_time = recent_attempts[-1]['timestamp']
+        time_diff = (last_time - first_time).total_seconds()
+        
+        # TODO: If attempts occurred within time window, raise alert
+        if time_diff <= self.time_window:
+            alert = {
+                'ip': ip,
+                'attempts': len(attempts),
+                'users_targeted': list(set([a['user'] for a in attempts])),
+                'first_attempt': first_time,
+                'last_attempt': last_time
+            }
+            
+            # Only add if not already alerted for this IP
+            if not any(a['ip'] == ip for a in self.alerts):
+                self.alerts.append(alert)
+                self.raise_alert(alert)
+    
+    def raise_alert(self, alert):
+        """
+        Display alert information for detected attack
+        
+        Args:
+            alert: Dictionary containing attack details
+        """
+        print("\n" + "="*60)
+        print("SECURITY ALERT: Brute-force Attack Detected!")
+        print("="*60)
+        print(f"Source IP: {alert['ip']}")
+        print(f"Total Failed Attempts: {alert['attempts']}")
+        print(f"Targeted Users: {', '.join(alert['users_targeted'])}")
+        print(f"Attack Duration: {alert['first_attempt']} to {alert['last_attempt']}")
+        print("="*60 + "\n")
+    
+    def process_log_file(self, filename):
+        """
+        Process entire log file and detect attacks
+        
+        Args:
+            filename: Path to the log file
+        """
+        print(f"Analyzing log file: {filename}")
+        print(f"Detection threshold: {self.threshold} failed attempts")
+        print(f"Time window: {self.time_window} seconds\n")
+        
+        try:
+            # TODO: Open and read the log file line by line
+            with open(filename, 'r') as f:
+                for line in f:
+                    # TODO: Parse each line
+                    log_entry = self.parse_log_line(line)
+                    # TODO: Analyze the attempt
+                    self.analyze_attempt(log_entry)
+            
+            # TODO: Print summary
+            self.print_summary()
+            
+        except FileNotFoundError:
+            print(f"Error: File {filename} not found")
+        except Exception as e:
+            print(f"Error processing file: {e}")
+    
+    def print_summary(self):
+        """
+        Print detection summary
+        """
+        print("\n" + "="*60)
+        print("DETECTION SUMMARY")
+        print("="*60)
+        print(f"Total IPs analyzed: {len(self.failed_attempts)}")
+        print(f"Attacks detected: {len(self.alerts)}")
+        
+        if self.alerts:
+            print("\nSuspicious IP Addresses:")
+            for alert in self.alerts:
+                print(f"  - {alert['ip']} ({alert['attempts']} failed attempts)")
+        else:
+            print("\nNo brute-force attacks detected.")
+        print("="*60)
+
+
+def main():
+    """
+    Main function to run the detector
+    """
+    # TODO: Create detector instance with threshold of 5 attempts
+    detector = BruteForceDetector(threshold=5, time_window=300)
+    
+    # TODO: Process the log file
+    detector.process_log_file('auth.log')
+
+
+if __name__ == "__main__":
+    main()
+Save and exit (Ctrl+X, then Y, then Enter).
+
+Step 3: Make Script Executable
+chmod +x detector.py
+Step 4: Run the Detection Engine
+python3 detector.py
+Expected Output:
+
+Analyzing log file: auth.log
+Detection threshold: 5 failed attempts
+Time window: 300 seconds
+
+============================================================
+SECURITY ALERT: Brute-force Attack Detected!
+============================================================
+Source IP: 203.0.113.45
+Total Failed Attempts: 8
+Targeted Users: admin
+Attack Duration: 2024-01-15 10:24:12 to 2024-01-15 10:28:47
+============================================================
+
+============================================================
+DETECTION SUMMARY
+============================================================
+Total IPs analyzed: 2
+Attacks detected: 1
+
+Suspicious IP Addresses:
+  - 203.0.113.45 (8 failed attempts)
+============================================================
+Task 2: Enhance Detection with Alert Logging
+Add functionality to save alerts to a file for later review.
+
+Step 1: Create Alert Logger Function
+Add this function to your detector.py file after the raise_alert method:
+
+    def save_alerts_to_file(self, filename='alerts.log'):
+        """
+        Save all detected alerts to a file
+        
+        Args:
+            filename: Output file for alerts
+        """
+        # TODO: Open file in write mode
+        with open(filename, 'w') as f:
+            f.write("BRUTE-FORCE ATTACK DETECTION REPORT\n")
+            f.write("="*60 + "\n\n")
+            
+            # TODO: Write each alert to file
+            for i, alert in enumerate(self.alerts, 1):
+                f.write(f"Alert #{i}\n")
+                f.write(f"IP Address: {alert['ip']}\n")
+                f.write(f"Failed Attempts: {alert['attempts']}\n")
+                f.write(f"Targeted Users: {', '.join(alert['users_targeted'])}\n")
+                f.write(f"Time Range: {alert['first_attempt']} to {alert['last_attempt']}\n")
+                f.write("-"*60 + "\n\n")
+        
+        print(f"\nAlerts saved to {filename}")
+Step 2: Update Main Function
+Modify the main() function to save alerts:
+
+def main():
+    """
+    Main function to run the detector
+    """
+    detector = BruteForceDetector(threshold=5, time_window=300)
+    detector.process_log_file('auth.log')
+    
+    # TODO: Save alerts to file
+    if detector.alerts:
+        detector.save_alerts_to_file('alerts.log')
+Step 3: Test Enhanced Detection
+python3 detector.py
+Step 4: View Saved Alerts
+cat alerts.log
+Verification
+Test 1: Verify Detection Accuracy
+Check that the script correctly identifies the brute-force attack:
+
+grep "203.0.113.45" auth.log | wc -l
+This should show 8 failed attempts from IP 203.0.113.45.
+
+Test 2: Test with Different Threshold
+Modify the threshold to see how it affects detection:
+
+detector = BruteForceDetector(threshold=3, time_window=300)
+Run again and observe that more IPs may be flagged.
+
+Test 3: Create Custom Test Log
+Create a new log file with your own patterns:
+
+cat > test.log << 'EOF'
+2024-01-15 11:00:00 FAILED user=testuser ip=10.0.0.1
+2024-01-15 11:00:05 FAILED user=testuser ip=10.0.0.1
+2024-01-15 11:00:10 FAILED user=testuser ip=10.0.0.1
+2024-01-15 11:00:15 FAILED user=testuser ip=10.0.0.1
+2024-01-15 11:00:20 FAILED user=testuser ip=10.0.0.1
+EOF
+Modify the script to process test.log and verify it detects the attack.
+
+Troubleshooting Tips
+Issue: Script shows "File not found"
+
+Ensure you're in the correct directory: pwd
+Verify the log file exists: ls -l auth.log
+Issue: No alerts detected
+
+Check your threshold value (lower it to 3 or 4)
+Verify log file format matches expected pattern
+Add debug print statements to see parsed entries
+Issue: Parsing errors
+
+Ensure log file has correct format with spaces between fields
+Check for extra whitespace or special characters
+Issue: Permission denied
+
+Make script executable: chmod +x detector.py
+Check file permissions: ls -l detector.py
+Conclusion
+Congratulations! You've successfully built a brute-force attack detection engine. You've learned to:
+
+Parse authentication log files to extract security-relevant information
+Identify suspicious patterns indicating brute-force attacks
+Implement threshold-based detection algorithms
+Generate security alerts for potential threats
+Save detection results for security auditing
+Real-world Applications:
+
+Security Information and Event Management (SIEM) systems use similar techniques
+Intrusion Detection Systems (IDS) monitor authentication attempts
+Cloud platforms implement rate-limiting based on these patterns
+Security Operations Centers (SOCs) rely on automated detection tools
+Next Steps:
+
+Integrate with real system logs (/var/log/auth.log on Linux)
+Add email or webhook notifications for alerts
+Implement IP blocking or rate limiting
+Create a dashboard to visualize attack patterns
+Add machine learning for anomaly detection
+This foundational knowledge prepares you for advanced security monitoring and incident response roles in cybersecurity.
