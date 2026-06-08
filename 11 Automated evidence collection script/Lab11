@@ -1,0 +1,328 @@
+Automated Evidence Collection Script
+Prerequisites
+Basic Linux command line knowledge
+Understanding of file system navigation (cd, ls, pwd)
+Familiarity with text editors (nano or vi)
+Basic understanding of bash scripting concepts
+Root or sudo access to the Linux machine
+Learning Objectives
+By completing this lab, you will:
+
+Understand the fundamentals of forensic evidence collection
+Create an automated bash script to gather system information
+Collect and preserve logs with proper timestamps
+Store evidence securely with hash verification
+Learn best practices for maintaining chain of custody
+Environment Setup
+Note: Al Nafi provides a bare-metal Linux cloud machine. Click the "Start Lab" button to access your environment.
+
+Install Required Tools
+# Update package list
+sudo apt update
+
+# Install required packages
+sudo apt install -y coreutils util-linux net-tools
+
+# Verify installations
+which md5sum sha256sum date hostname
+Task 1: Create the Evidence Collection Script
+Step 1: Set Up Working Directory
+Create a dedicated directory for your forensic collection script:
+
+# Create forensic tools directory
+mkdir -p ~/forensic-tools
+cd ~/forensic-tools
+
+# Create evidence storage directory
+mkdir -p ~/evidence-collection
+Step 2: Create the Main Collection Script
+Create a new script file:
+
+nano collect_evidence.sh
+Add the following starter template:
+
+#!/bin/bash
+
+# Automated Evidence Collection Script
+# Purpose: Collect system information, logs, and timestamps for forensic analysis
+
+# TODO: Set up variables for evidence storage
+EVIDENCE_DIR=""  # Set to ~/evidence-collection/evidence_$(date +%Y%m%d_%H%M%S)
+CASE_NAME=""     # Set to a descriptive case name
+COLLECTOR=""     # Set to your name or ID
+
+# TODO: Create evidence directory with timestamp
+# Use mkdir -p command
+
+# TODO: Create a case information file
+# Include: Case name, collector name, collection date/time, hostname
+
+echo "Evidence collection started..."
+
+# Function to collect system information
+collect_system_info() {
+    echo "Collecting system information..."
+    
+    # TODO: Collect hostname
+    # Use: hostname > $EVIDENCE_DIR/hostname.txt
+    
+    # TODO: Collect system uptime
+    # Use: uptime > $EVIDENCE_DIR/uptime.txt
+    
+    # TODO: Collect OS information
+    # Use: cat /etc/os-release > $EVIDENCE_DIR/os_info.txt
+    
+    # TODO: Collect kernel version
+    # Use: uname -a > $EVIDENCE_DIR/kernel_info.txt
+    
+    # TODO: Collect current date and time
+    # Use: date > $EVIDENCE_DIR/collection_time.txt
+}
+
+# Function to collect user and process information
+collect_user_process_info() {
+    echo "Collecting user and process information..."
+    
+    # TODO: Collect currently logged in users
+    # Use: w > $EVIDENCE_DIR/logged_users.txt
+    
+    # TODO: Collect user accounts
+    # Use: cat /etc/passwd > $EVIDENCE_DIR/user_accounts.txt
+    
+    # TODO: Collect running processes
+    # Use: ps aux > $EVIDENCE_DIR/running_processes.txt
+}
+
+# Function to collect network information
+collect_network_info() {
+    echo "Collecting network information..."
+    
+    # TODO: Collect network interfaces
+    # Use: ip addr > $EVIDENCE_DIR/network_interfaces.txt
+    
+    # TODO: Collect network connections
+    # Use: netstat -tuln > $EVIDENCE_DIR/network_connections.txt 2>/dev/null
+    # Or use: ss -tuln > $EVIDENCE_DIR/network_connections.txt
+    
+    # TODO: Collect routing table
+    # Use: ip route > $EVIDENCE_DIR/routing_table.txt
+}
+
+# Function to collect system logs
+collect_logs() {
+    echo "Collecting system logs..."
+    
+    # Create logs subdirectory
+    mkdir -p $EVIDENCE_DIR/logs
+    
+    # TODO: Copy authentication logs
+    # Use: sudo cp /var/log/auth.log* $EVIDENCE_DIR/logs/ 2>/dev/null
+    
+    # TODO: Copy system logs
+    # Use: sudo cp /var/log/syslog* $EVIDENCE_DIR/logs/ 2>/dev/null
+    
+    # TODO: Collect last login information
+    # Use: last > $EVIDENCE_DIR/last_logins.txt
+    
+    # TODO: Collect failed login attempts
+    # Use: sudo lastb > $EVIDENCE_DIR/failed_logins.txt 2>/dev/null
+}
+
+# Function to create hash values for integrity
+create_hashes() {
+    echo "Creating hash values for evidence integrity..."
+    
+    # TODO: Create MD5 hashes for all collected files
+    # Use: find $EVIDENCE_DIR -type f -exec md5sum {} \; > $EVIDENCE_DIR/evidence_md5.txt
+    
+    # TODO: Create SHA256 hashes for all collected files
+    # Use: find $EVIDENCE_DIR -type f -exec sha256sum {} \; > $EVIDENCE_DIR/evidence_sha256.txt
+}
+
+# Function to create collection summary
+create_summary() {
+    echo "Creating collection summary..."
+    
+    # TODO: Create summary file with collection details
+    # Include: Total files collected, collection end time, evidence directory size
+    # Use: du -sh $EVIDENCE_DIR
+}
+
+# Main execution
+# TODO: Call all collection functions in order
+# collect_system_info
+# collect_user_process_info
+# collect_network_info
+# collect_logs
+# create_hashes
+# create_summary
+
+echo "Evidence collection completed!"
+echo "Evidence stored in: $EVIDENCE_DIR"
+Step 3: Complete the Script
+Fill in the TODO sections with appropriate commands. Here's guidance for key sections:
+
+Variables Setup Example:
+
+EVIDENCE_DIR=~/evidence-collection/evidence_$(date +%Y%m%d_%H%M%S)
+CASE_NAME="Lab11_Evidence_Collection"
+COLLECTOR="Student_$(whoami)"
+Case Information File Example:
+
+cat > $EVIDENCE_DIR/case_info.txt << EOF
+Case Name: $CASE_NAME
+Collector: $COLLECTOR
+Collection Date: $(date)
+Hostname: $(hostname)
+EOF
+Step 4: Make Script Executable
+chmod +x collect_evidence.sh
+Step 5: Run the Evidence Collection Script
+sudo ./collect_evidence.sh
+Expected Output:
+
+Evidence collection started...
+Collecting system information...
+Collecting user and process information...
+Collecting network information...
+Collecting system logs...
+Creating hash values for evidence integrity...
+Creating collection summary...
+Evidence collection completed!
+Evidence stored in: /home/user/evidence-collection/evidence_20240115_143022
+Task 2: Verify and Secure Evidence
+Step 1: Review Collected Evidence
+Navigate to the evidence directory:
+
+# Find your evidence directory
+ls -lh ~/evidence-collection/
+
+# Navigate to the most recent collection
+cd ~/evidence-collection/evidence_*
+
+# List all collected files
+ls -lR
+Step 2: Verify Hash Integrity
+Create a verification script:
+
+cd ~/forensic-tools
+nano verify_evidence.sh
+Add the following content:
+
+#!/bin/bash
+
+# Evidence Verification Script
+# Purpose: Verify integrity of collected evidence using hash values
+
+# TODO: Set evidence directory path
+EVIDENCE_DIR=""  # Set to your evidence directory path
+
+echo "Starting evidence verification..."
+
+# TODO: Verify MD5 hashes
+# Use: md5sum -c $EVIDENCE_DIR/evidence_md5.txt
+
+# TODO: Verify SHA256 hashes  
+# Use: sha256sum -c $EVIDENCE_DIR/evidence_sha256.txt
+
+echo "Verification completed!"
+Make it executable and run:
+
+chmod +x verify_evidence.sh
+
+# Edit the script to add your evidence directory path
+nano verify_evidence.sh
+
+# Run verification
+./verify_evidence.sh
+Step 3: Create Evidence Archive
+Create a compressed archive for secure storage:
+
+# Navigate to evidence collection directory
+cd ~/evidence-collection
+
+# Create compressed archive with timestamp
+tar -czf evidence_archive_$(date +%Y%m%d_%H%M%S).tar.gz evidence_*/
+
+# Verify archive was created
+ls -lh evidence_archive_*.tar.gz
+
+# Create hash of the archive for integrity
+sha256sum evidence_archive_*.tar.gz > evidence_archive.sha256
+Step 4: Set Proper Permissions
+Secure the evidence with appropriate permissions:
+
+# Set read-only permissions on evidence directory
+chmod -R 444 ~/evidence-collection/evidence_*/
+
+# Verify permissions
+ls -la ~/evidence-collection/evidence_*/
+Verification
+Verify Script Functionality
+Check that your collection script gathered all required information:
+
+# Navigate to evidence directory
+cd ~/evidence-collection/evidence_*/
+
+# Check system information files exist
+ls -1 hostname.txt uptime.txt os_info.txt kernel_info.txt collection_time.txt
+
+# Check user and process information
+ls -1 logged_users.txt user_accounts.txt running_processes.txt
+
+# Check network information
+ls -1 network_interfaces.txt network_connections.txt routing_table.txt
+
+# Check logs directory
+ls -1 logs/
+
+# Check hash files exist
+ls -1 evidence_md5.txt evidence_sha256.txt
+
+# View case information
+cat case_info.txt
+Verify Evidence Integrity
+# Count total files collected
+find ~/evidence-collection/evidence_*/ -type f | wc -l
+
+# Verify hash files are not empty
+wc -l ~/evidence-collection/evidence_*/evidence_*.txt
+
+# Check archive integrity
+sha256sum -c ~/evidence-collection/evidence_archive.sha256
+Expected Results
+Evidence directory created with timestamp
+All system information files present and contain data
+Log files copied successfully
+Hash files generated for all evidence
+Archive created and verified
+Proper permissions set (read-only)
+Troubleshooting Tips
+Permission Denied Errors:
+
+Ensure you run the script with sudo for log collection
+Check that you have write permissions in the evidence directory
+Missing Commands:
+
+If netstat is not found, use ss -tuln instead
+Install missing packages: sudo apt install net-tools
+Empty Log Files:
+
+Some systems use journalctl instead of traditional logs
+Alternative: sudo journalctl > $EVIDENCE_DIR/logs/journal.log
+Hash Verification Failures:
+
+Ensure you don't modify files after hash creation
+Re-run hash creation if files were changed
+Conclusion
+You have successfully created an automated evidence collection script that:
+
+Gathers critical system information including hostname, OS details, and kernel version
+Collects user activity and process information for analysis
+Captures network configuration and active connections
+Preserves system logs with proper timestamps
+Generates cryptographic hashes (MD5 and SHA256) for evidence integrity
+Creates secure, read-only archives of collected evidence
+Real-World Significance: This type of automated collection is essential in incident response and forensic investigations. It ensures consistent, repeatable evidence gathering while maintaining chain of custody. The hash values provide cryptographic proof that evidence hasn't been tampered with, which is critical for legal proceedings.
+
+Next Steps: Consider enhancing your script to collect additional artifacts such as browser history, scheduled tasks (cron jobs), or memory dumps for more comprehensive forensic analysis.
