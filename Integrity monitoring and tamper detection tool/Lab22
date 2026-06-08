@@ -1,0 +1,244 @@
+Integrity Monitoring and Tamper Detection Tool
+Prerequisites
+Basic Linux command line knowledge (navigating directories, creating files)
+Understanding of file permissions
+Familiarity with text editors (nano or vi)
+Access to a Linux machine with sudo privileges
+Learning Objectives
+By completing this lab, you will:
+
+Understand file integrity monitoring concepts
+Install and configure AIDE (Advanced Intrusion Detection Environment)
+Monitor files for unauthorized changes
+Detect tampering attempts on critical system files
+Generate and interpret security alerts
+Environment Setup
+Step 1: Update System and Install AIDE
+AIDE is an open-source file integrity monitoring tool that creates a database of file attributes and detects changes.
+
+# Update package lists
+sudo apt update
+
+# Install AIDE
+sudo apt install aide -y
+Step 2: Verify Installation
+# Check AIDE version
+aide --version
+Expected output should show AIDE version information.
+
+Task 1: Initialize AIDE and Create Baseline Database
+Step 1.1: Configure AIDE
+AIDE's configuration file defines which directories and files to monitor.
+
+# View the default configuration
+sudo cat /etc/aide/aide.conf | grep -v "^#" | grep -v "^$" | head -20
+The configuration file contains rules for monitoring different directories. Key sections include:
+
+/bin - System binaries
+/sbin - System administration binaries
+/etc - Configuration files
+Step 1.2: Create Initial Database
+This creates a baseline of your system's current state.
+
+# Initialize AIDE database (this may take 2-5 minutes)
+sudo aideinit
+Note: This command scans all configured files and creates a database of their attributes (checksums, permissions, timestamps).
+
+Step 1.3: Move Database to Active Location
+# Copy the newly created database to the active location
+sudo cp /var/lib/aide/aide.db.new /var/lib/aide/aide.db
+Step 1.4: Verify Database Creation
+# Check database file exists
+ls -lh /var/lib/aide/aide.db
+You should see a database file with a size of several megabytes.
+
+Task 2: Monitor Files and Detect Tampering
+Step 2.1: Create Test Files to Monitor
+Create a directory with files we'll monitor for changes.
+
+# Create test directory
+sudo mkdir -p /opt/critical_files
+
+# Create test files
+sudo bash -c 'echo "Original content - Configuration file" > /opt/critical_files/config.txt'
+sudo bash -c 'echo "Original content - Data file" > /opt/critical_files/data.txt'
+sudo bash -c 'echo "#!/bin/bash" > /opt/critical_files/script.sh'
+sudo chmod +x /opt/critical_files/script.sh
+
+# Verify files created
+ls -la /opt/critical_files/
+Step 2.2: Add Custom Monitoring Rule
+Add our test directory to AIDE's configuration.
+
+# Backup original configuration
+sudo cp /etc/aide/aide.conf /etc/aide/aide.conf.backup
+
+# Add custom monitoring rule
+sudo bash -c 'echo "" >> /etc/aide/aide.conf'
+sudo bash -c 'echo "# Custom monitoring for lab" >> /etc/aide/aide.conf'
+sudo bash -c 'echo "/opt/critical_files R" >> /etc/aide/aide.conf'
+Explanation: The R rule monitors for changes in permissions, ownership, file type, and content.
+
+Step 2.3: Update Database with New Files
+# Update AIDE database to include new files
+sudo aide --update
+
+# Replace old database with updated one
+sudo cp /var/lib/aide/aide.db.new /var/lib/aide/aide.db
+Step 2.4: Run Initial Check (Should Show No Changes)
+# Perform integrity check
+sudo aide --check
+Expected output: "AIDE found NO differences between database and filesystem."
+
+Step 2.5: Simulate Tampering
+Now we'll modify files to simulate unauthorized changes.
+
+# Modify content of a file
+sudo bash -c 'echo "TAMPERED - Malicious content added" >> /opt/critical_files/config.txt'
+
+# Change permissions on another file
+sudo chmod 777 /opt/critical_files/script.sh
+
+# Delete a file
+sudo rm /opt/critical_files/data.txt
+
+# Create an unauthorized new file
+sudo bash -c 'echo "Backdoor script" > /opt/critical_files/backdoor.sh'
+Step 2.6: Detect Tampering
+# Run integrity check to detect changes
+sudo aide --check
+Analyze the output. AIDE will report:
+
+Changed files: Shows what was modified in config.txt
+Changed permissions: Shows permission changes on script.sh
+Removed files: Shows data.txt was deleted
+Added files: Shows backdoor.sh was added
+Step 2.7: Generate Detailed Report
+# Save detailed report to file
+sudo aide --check > /tmp/aide_report.txt 2>&1
+
+# View the report
+cat /tmp/aide_report.txt
+Step 2.8: Interpret the Report
+# Extract only the summary section
+grep -A 20 "^Summary:" /tmp/aide_report.txt
+The summary shows:
+
+Total number of entries in database
+Number of added files
+Number of removed files
+Number of changed files
+Task 3: Create Alert Script
+Step 3.1: Create Automated Monitoring Script
+Create a script that runs AIDE checks and generates alerts.
+
+# Create monitoring script
+sudo nano /usr/local/bin/integrity_monitor.sh
+Add the following content:
+
+#!/bin/bash
+# Integrity Monitoring Script
+# Runs AIDE check and generates alerts
+
+REPORT_FILE="/var/log/aide_check_$(date +%Y%m%d_%H%M%S).log"
+ALERT_FILE="/var/log/aide_alerts.log"
+
+# Run AIDE check
+echo "Running integrity check at $(date)" | sudo tee -a $ALERT_FILE
+sudo aide --check > $REPORT_FILE 2>&1
+
+# Check if changes were detected
+if grep -q "found differences" $REPORT_FILE; then
+    echo "ALERT: File integrity violations detected!" | sudo tee -a $ALERT_FILE
+    echo "Report saved to: $REPORT_FILE" | sudo tee -a $ALERT_FILE
+    
+    # Extract summary
+    grep -A 10 "^Summary:" $REPORT_FILE | sudo tee -a $ALERT_FILE
+    
+    echo "---" | sudo tee -a $ALERT_FILE
+else
+    echo "No integrity violations detected." | sudo tee -a $ALERT_FILE
+fi
+Save and exit (Ctrl+X, Y, Enter).
+
+Step 3.2: Make Script Executable
+# Set execute permissions
+sudo chmod +x /usr/local/bin/integrity_monitor.sh
+Step 3.3: Test Alert Script
+# Run the monitoring script
+sudo /usr/local/bin/integrity_monitor.sh
+
+# View the alert log
+cat /var/log/aide_alerts.log
+Step 3.4: View Detailed Report
+# List generated reports
+ls -lh /var/log/aide_check_*.log
+
+# View the most recent report
+sudo cat $(ls -t /var/log/aide_check_*.log | head -1)
+Verification
+Verify Task 1: Database Creation
+# Confirm AIDE database exists and has content
+sudo aide --check --config=/etc/aide/aide.conf | head -20
+Verify Task 2: Tampering Detection
+# Check that changes were detected
+grep -c "changed" /tmp/aide_report.txt
+Expected: Should show a number greater than 0.
+
+Verify Task 3: Alert Generation
+# Verify alert log exists and contains entries
+test -f /var/log/aide_alerts.log && echo "Alert log exists" || echo "Alert log missing"
+
+# Count alerts generated
+grep -c "ALERT" /var/log/aide_alerts.log
+Complete Verification Test
+# Restore files to original state
+sudo bash -c 'echo "Original content - Configuration file" > /opt/critical_files/config.txt'
+sudo chmod 755 /opt/critical_files/script.sh
+sudo bash -c 'echo "Original content - Data file" > /opt/critical_files/data.txt'
+sudo rm /opt/critical_files/backdoor.sh
+
+# Update database
+sudo aide --update
+sudo cp /var/lib/aide/aide.db.new /var/lib/aide/aide.db
+
+# Run check - should show no differences
+sudo aide --check | grep -i "found NO differences"
+If you see "AIDE found NO differences", verification is successful.
+
+Troubleshooting Tips
+Issue: AIDE initialization takes too long
+
+Solution: This is normal for first run. AIDE scans many files. Wait 5-10 minutes.
+Issue: Permission denied errors
+
+Solution: Ensure you're using sudo for all AIDE commands.
+Issue: Database not found error
+
+Solution: Run sudo cp /var/lib/aide/aide.db.new /var/lib/aide/aide.db to activate the database.
+Issue: No changes detected after tampering
+
+Solution: Verify the directory is in aide.conf with grep "/opt/critical_files" /etc/aide/aide.conf
+Conclusion
+You have successfully:
+
+Installed and configured AIDE for file integrity monitoring
+Created a baseline database of system files
+Simulated and detected various types of file tampering (modifications, permission changes, deletions, additions)
+Generated automated alerts for security violations
+Created a monitoring script for ongoing integrity checks
+Real-World Significance: File integrity monitoring is critical for:
+
+Detecting unauthorized system changes
+Identifying malware or rootkit installations
+Meeting compliance requirements (PCI-DSS, HIPAA)
+Forensic investigation after security incidents
+Protecting critical configuration files
+Next Steps: In production environments, you would:
+
+Schedule regular AIDE checks via cron
+Send alerts to a SIEM system
+Store databases on read-only media
+Monitor additional critical directories
+Integrate with incident response procedures
+This lab provided hands-on experience with a fundamental security control used by cybersecurity professionals worldwide.
