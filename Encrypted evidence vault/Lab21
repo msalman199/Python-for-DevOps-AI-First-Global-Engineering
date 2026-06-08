@@ -1,0 +1,354 @@
+Encrypted Evidence Vault
+Prerequisites
+Basic Linux command line knowledge
+Understanding of file permissions
+Familiarity with text editors (nano or vi)
+Root or sudo access to a Linux machine
+Learning Objectives
+By completing this lab, you will:
+
+Understand encryption fundamentals for protecting forensic data
+Implement encrypted storage containers for sensitive evidence
+Manage encryption keys securely
+Control access to encrypted evidence vaults
+Verify data integrity of stored evidence
+Environment Setup
+Al Nafi provides a bare-metal Linux machine. Click Start Lab to begin.
+
+Install Required Tools
+# Update package list
+sudo apt update
+
+# Install cryptsetup for LUKS encryption
+sudo apt install -y cryptsetup
+
+# Install additional utilities
+sudo apt install -y tree gnupg2
+Verify installation:
+
+cryptsetup --version
+gpg --version
+Task 1: Create an Encrypted Evidence Vault
+Step 1: Create a Container File
+Create a file that will serve as your encrypted vault:
+
+# Create a directory for evidence management
+mkdir -p ~/evidence-lab
+cd ~/evidence-lab
+
+# Create a 100MB file for the encrypted container
+dd if=/dev/zero of=evidence_vault.img bs=1M count=100
+
+# Verify the file was created
+ls -lh evidence_vault.img
+Step 2: Initialize LUKS Encryption
+Set up LUKS (Linux Unified Key Setup) encryption on the container:
+
+# Initialize LUKS encryption (you'll be prompted for a passphrase)
+# Use a strong passphrase like: ForensicEvidence2024!
+sudo cryptsetup luksFormat evidence_vault.img
+Important: Type YES (in uppercase) when prompted, then enter your passphrase twice.
+
+Step 3: Open the Encrypted Container
+# Open the encrypted container with a mapping name
+sudo cryptsetup luksOpen evidence_vault.img evidence_vault
+
+# Verify the mapping was created
+ls -l /dev/mapper/evidence_vault
+Step 4: Create a Filesystem
+# Create an ext4 filesystem inside the encrypted container
+sudo mkfs.ext4 /dev/mapper/evidence_vault
+
+# Create a mount point
+sudo mkdir -p /mnt/evidence_vault
+
+# Mount the encrypted vault
+sudo mount /dev/mapper/evidence_vault /mnt/evidence_vault
+
+# Verify it's mounted
+df -h | grep evidence_vault
+Step 5: Store Sample Evidence
+# Create sample evidence files
+sudo bash -c 'cat > /mnt/evidence_vault/case_001.txt << EOF
+CASE ID: 001
+DATE: 2024-01-15
+INVESTIGATOR: J. Smith
+DESCRIPTION: Network intrusion evidence
+HASH: a1b2c3d4e5f6
+EOF'
+
+sudo bash -c 'cat > /mnt/evidence_vault/case_002.txt << EOF
+CASE ID: 002
+DATE: 2024-01-16
+INVESTIGATOR: M. Johnson
+DESCRIPTION: Malware sample analysis
+HASH: f6e5d4c3b2a1
+EOF'
+
+# Create a chain of custody log
+sudo bash -c 'cat > /mnt/evidence_vault/chain_of_custody.log << EOF
+[2024-01-15 10:30] Evidence collected by J. Smith
+[2024-01-15 11:00] Evidence stored in encrypted vault
+[2024-01-16 09:15] Evidence collected by M. Johnson
+[2024-01-16 09:45] Evidence stored in encrypted vault
+EOF'
+
+# List the contents
+sudo ls -la /mnt/evidence_vault/
+Step 6: Close the Vault Securely
+# Unmount the vault
+sudo umount /mnt/evidence_vault
+
+# Close the LUKS container
+sudo cryptsetup luksClose evidence_vault
+
+# Verify it's closed
+ls /dev/mapper/ | grep evidence_vault
+The vault is now encrypted and secure. The data is inaccessible without the passphrase.
+
+Task 2: Implement Key Management and Access Control
+Step 1: Add Multiple Key Slots
+LUKS supports multiple passphrases (key slots) for different users:
+
+# Reopen the vault
+sudo cryptsetup luksOpen evidence_vault.img evidence_vault
+
+# Add a second passphrase (backup key)
+# You'll need the original passphrase first, then enter a new one
+sudo cryptsetup luksAddKey evidence_vault.img
+Enter your original passphrase, then create a backup passphrase like: BackupKey2024!
+
+Step 2: View Key Slot Information
+# Display LUKS header information
+sudo cryptsetup luksDump evidence_vault.img | grep "Key Slot"
+You should see at least two key slots in use.
+
+Step 3: Create a Key File for Automated Access
+# Generate a random key file (more secure than passphrases for automation)
+sudo dd if=/dev/urandom of=~/evidence-lab/vault.key bs=512 count=1
+
+# Secure the key file permissions
+sudo chmod 400 ~/evidence-lab/vault.key
+
+# Add the key file to a LUKS key slot
+sudo cryptsetup luksAddKey evidence_vault.img ~/evidence-lab/vault.key
+Step 4: Test Key File Access
+# Close the current vault
+sudo cryptsetup luksClose evidence_vault
+
+# Open using the key file (no passphrase prompt)
+sudo cryptsetup luksOpen evidence_vault.img evidence_vault --key-file ~/evidence-lab/vault.key
+
+# Mount the vault
+sudo mount /dev/mapper/evidence_vault /mnt/evidence_vault
+
+# Verify access
+sudo ls /mnt/evidence_vault/
+Step 5: Create an Access Control Script
+Create a script to manage vault access:
+
+cat > ~/evidence-lab/vault_manager.sh << 'EOF'
+#!/bin/bash
+
+VAULT_IMAGE="$HOME/evidence-lab/evidence_vault.img"
+VAULT_NAME="evidence_vault"
+MOUNT_POINT="/mnt/evidence_vault"
+KEY_FILE="$HOME/evidence-lab/vault.key"
+
+case "$1" in
+    open)
+        echo "Opening evidence vault..."
+        sudo cryptsetup luksOpen "$VAULT_IMAGE" "$VAULT_NAME" --key-file "$KEY_FILE"
+        sudo mount /dev/mapper/"$VAULT_NAME" "$MOUNT_POINT"
+        echo "Vault opened and mounted at $MOUNT_POINT"
+        ;;
+    close)
+        echo "Closing evidence vault..."
+        sudo umount "$MOUNT_POINT"
+        sudo cryptsetup luksClose "$VAULT_NAME"
+        echo "Vault closed securely"
+        ;;
+    status)
+        if [ -e /dev/mapper/"$VAULT_NAME" ]; then
+            echo "Vault is OPEN"
+            df -h | grep "$VAULT_NAME"
+        else
+            echo "Vault is CLOSED"
+        fi
+        ;;
+    *)
+        echo "Usage: $0 {open|close|status}"
+        exit 1
+        ;;
+esac
+EOF
+
+# Make the script executable
+chmod +x ~/evidence-lab/vault_manager.sh
+Step 6: Test the Management Script
+# Check current status
+~/evidence-lab/vault_manager.sh status
+
+# Close the vault
+~/evidence-lab/vault_manager.sh close
+
+# Verify it's closed
+~/evidence-lab/vault_manager.sh status
+
+# Reopen the vault
+~/evidence-lab/vault_manager.sh open
+
+# Verify it's open
+~/evidence-lab/vault_manager.sh status
+Step 7: Implement Evidence Integrity Checking
+Create checksums for evidence verification:
+
+# Generate checksums for all evidence files
+sudo bash -c 'cd /mnt/evidence_vault && sha256sum *.txt > evidence_checksums.sha256'
+
+# View the checksums
+sudo cat /mnt/evidence_vault/evidence_checksums.sha256
+
+# Create a verification script
+cat > ~/evidence-lab/verify_evidence.sh << 'EOF'
+#!/bin/bash
+
+MOUNT_POINT="/mnt/evidence_vault"
+
+if [ ! -d "$MOUNT_POINT" ]; then
+    echo "Error: Vault not mounted"
+    exit 1
+fi
+
+echo "Verifying evidence integrity..."
+cd "$MOUNT_POINT"
+sudo sha256sum -c evidence_checksums.sha256
+
+if [ $? -eq 0 ]; then
+    echo "All evidence files verified successfully"
+else
+    echo "WARNING: Evidence integrity check FAILED"
+fi
+EOF
+
+chmod +x ~/evidence-lab/verify_evidence.sh
+Step 8: Test Evidence Verification
+# Verify evidence integrity
+~/evidence-lab/verify_evidence.sh
+
+# Simulate tampering (for testing)
+sudo bash -c 'echo "tampered" >> /mnt/evidence_vault/case_001.txt'
+
+# Verify again (should fail)
+~/evidence-lab/verify_evidence.sh
+
+# Restore the file
+sudo bash -c 'head -n -1 /mnt/evidence_vault/case_001.txt > /tmp/temp.txt && cat /tmp/temp.txt > /mnt/evidence_vault/case_001.txt'
+
+# Verify again (should pass)
+~/evidence-lab/verify_evidence.sh
+Step 9: Create an Audit Log System
+# Create an audit logging function
+cat > ~/evidence-lab/audit_log.sh << 'EOF'
+#!/bin/bash
+
+LOG_FILE="$HOME/evidence-lab/vault_audit.log"
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+USER=$(whoami)
+ACTION="$1"
+DETAILS="$2"
+
+echo "[$TIMESTAMP] USER: $USER | ACTION: $ACTION | DETAILS: $DETAILS" >> "$LOG_FILE"
+echo "Audit entry logged"
+EOF
+
+chmod +x ~/evidence-lab/audit_log.sh
+
+# Log some actions
+~/evidence-lab/audit_log.sh "VAULT_OPENED" "Evidence vault accessed for review"
+~/evidence-lab/audit_log.sh "EVIDENCE_VERIFIED" "Integrity check passed for all files"
+~/evidence-lab/audit_log.sh "EVIDENCE_ADDED" "New case file case_003.txt added"
+
+# View the audit log
+cat ~/evidence-lab/vault_audit.log
+Step 10: Secure Key Backup
+# Create an encrypted backup of the key file using GPG
+gpg --symmetric --cipher-algo AES256 ~/evidence-lab/vault.key
+
+# This creates vault.key.gpg (encrypted backup)
+ls -l ~/evidence-lab/vault.key.gpg
+
+# Remove the original key file for security (optional in production)
+# sudo shred -u ~/evidence-lab/vault.key
+
+# To restore the key later, use:
+# gpg --decrypt ~/evidence-lab/vault.key.gpg > ~/evidence-lab/vault.key
+Verification
+Verify Encrypted Vault Creation
+# Check the vault file exists
+ls -lh ~/evidence-lab/evidence_vault.img
+
+# Verify LUKS header
+sudo cryptsetup luksDump ~/evidence-lab/evidence_vault.img | head -n 10
+Expected output: LUKS header information showing version and cipher details.
+
+Verify Key Management
+# Check number of active key slots
+sudo cryptsetup luksDump ~/evidence-lab/evidence_vault.img | grep "Key Slot" | grep "ENABLED" | wc -l
+Expected output: At least 3 (original passphrase, backup passphrase, key file).
+
+Verify Access Control
+# Test the management script
+~/evidence-lab/vault_manager.sh status
+
+# Verify evidence files are accessible
+sudo ls -la /mnt/evidence_vault/
+Expected output: List of evidence files and checksums.
+
+Verify Integrity Checking
+# Run integrity verification
+~/evidence-lab/verify_evidence.sh
+Expected output: "All evidence files verified successfully"
+
+Verify Audit Logging
+# Check audit log exists and contains entries
+cat ~/evidence-lab/vault_audit.log | wc -l
+Expected output: At least 3 log entries.
+
+Complete Security Test
+# Close the vault
+~/evidence-lab/vault_manager.sh close
+
+# Try to access the raw vault file (should show encrypted data)
+sudo head -c 100 ~/evidence-lab/evidence_vault.img | xxd | head
+
+# Reopen with key file
+~/evidence-lab/vault_manager.sh open
+
+# Verify evidence is accessible
+sudo cat /mnt/evidence_vault/case_001.txt
+Cleanup (Optional)
+# Close the vault
+~/evidence-lab/vault_manager.sh close
+
+# Remove all lab files (only if you want to clean up)
+# sudo rm -rf ~/evidence-lab
+# sudo rm -rf /mnt/evidence_vault
+Conclusion
+You have successfully created a secure encrypted evidence vault system with:
+
+LUKS encryption protecting sensitive forensic data at rest
+Multiple authentication methods including passphrases and key files
+Access control scripts for managing vault operations
+Integrity verification using SHA-256 checksums
+Audit logging for tracking all vault access and modifications
+Secure key backup using GPG encryption
+This system demonstrates professional practices for protecting digital evidence in cybersecurity investigations. The encrypted vault ensures that sensitive forensic data remains confidential and tamper-evident, meeting chain of custody requirements for legal proceedings.
+
+Key Takeaways:
+
+Encryption protects data confidentiality even if storage media is compromised
+Multiple key slots provide redundancy and role-based access
+Integrity checking detects unauthorized modifications
+Audit logs provide accountability and forensic trails
+Proper key management is critical for long-term evidence preservation
