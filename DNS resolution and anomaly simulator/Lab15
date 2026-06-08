@@ -1,0 +1,620 @@
+DNS Resolution and Anomaly Simulator
+Prerequisites
+Basic Linux command line knowledge
+Understanding of networking fundamentals (IP addresses, domains)
+Familiarity with text editors (nano or vi)
+Basic Python programming concepts
+Learning Objectives
+By completing this lab, you will:
+
+Understand how DNS resolution works in practice
+Learn to query DNS records using command-line tools
+Simulate common DNS anomalies and security issues
+Detect unexpected DNS behavior that may indicate problems
+Build a simple DNS monitoring tool
+Environment Setup
+You will use the bare-metal Linux machine provided by Al Nafi. Click the "Start Lab" button to access your environment.
+
+Install Required Tools
+# Update package manager
+sudo apt update
+
+# Install DNS utilities
+sudo apt install -y dnsutils bind9-host
+
+# Install Python and pip
+sudo apt install -y python3 python3-pip
+
+# Install Python DNS library
+pip3 install dnspython
+Verify installations:
+
+# Check dig is installed
+dig -v
+
+# Check Python DNS library
+python3 -c "import dns.resolver; print('DNS library ready')"
+Task 1: DNS Resolution Basics
+Step 1: Explore DNS Query Tools
+Learn to use dig (Domain Information Groper) to query DNS records:
+
+# Basic DNS lookup
+dig google.com
+
+# Query specific record types
+dig google.com A      # IPv4 address
+dig google.com AAAA   # IPv6 address
+dig google.com MX     # Mail exchange records
+dig google.com NS     # Name servers
+dig google.com TXT    # Text records
+
+# Short answer format
+dig +short google.com
+
+# Query specific DNS server
+dig @8.8.8.8 google.com
+Step 2: Analyze DNS Response
+Perform a detailed query and understand the output:
+
+dig example.com
+Key sections to identify:
+
+QUESTION SECTION: What you asked
+ANSWER SECTION: The response
+Query time: How long it took
+SERVER: Which DNS server responded
+Step 3: Create DNS Query Log
+Create a script to log DNS queries:
+
+# Create working directory
+mkdir ~/dns-lab
+cd ~/dns-lab
+
+# Create log file
+touch dns_queries.log
+Create a simple bash script query_domains.sh:
+
+nano query_domains.sh
+Add this content:
+
+#!/bin/bash
+# Simple DNS query logger
+
+DOMAINS=("google.com" "github.com" "stackoverflow.com" "example.com")
+LOGFILE="dns_queries.log"
+
+echo "=== DNS Query Log - $(date) ===" >> $LOGFILE
+
+for domain in "${DOMAINS[@]}"; do
+    echo "Querying: $domain" >> $LOGFILE
+    dig +short $domain >> $LOGFILE
+    echo "---" >> $LOGFILE
+done
+Make it executable and run:
+
+chmod +x query_domains.sh
+./query_domains.sh
+cat dns_queries.log
+Task 2: Build DNS Anomaly Simulator
+Step 1: Create Python DNS Resolver
+Create a Python script that performs DNS lookups:
+
+nano dns_resolver.py
+Add this starter code:
+
+#!/usr/bin/env python3
+"""
+DNS Resolution and Anomaly Detection Tool
+"""
+
+import dns.resolver
+import time
+from datetime import datetime
+
+def resolve_domain(domain, record_type='A'):
+    """
+    Resolve a domain name to its DNS records.
+    
+    Args:
+        domain (str): Domain name to resolve
+        record_type (str): Type of DNS record (A, AAAA, MX, etc.)
+    
+    Returns:
+        list: List of resolved addresses or None if failed
+    """
+    try:
+        # TODO: Create a DNS resolver object
+        resolver = dns.resolver.Resolver()
+        
+        # TODO: Query the domain for specified record type
+        answers = resolver.resolve(domain, record_type)
+        
+        # TODO: Extract and return the results
+        results = [str(rdata) for rdata in answers]
+        return results
+        
+    except dns.resolver.NXDOMAIN:
+        print(f"[ERROR] Domain {domain} does not exist")
+        return None
+    except dns.resolver.Timeout:
+        print(f"[ERROR] Query timeout for {domain}")
+        return None
+    except Exception as e:
+        print(f"[ERROR] {str(e)}")
+        return None
+
+def check_domain_list(domains):
+    """
+    Check multiple domains and display results.
+    
+    Args:
+        domains (list): List of domain names to check
+    """
+    print(f"\n{'='*60}")
+    print(f"DNS Resolution Check - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"{'='*60}\n")
+    
+    for domain in domains:
+        print(f"Checking: {domain}")
+        results = resolve_domain(domain)
+        
+        if results:
+            for ip in results:
+                print(f"  -> {ip}")
+        else:
+            print(f"  -> Resolution failed")
+        print()
+
+# Test the resolver
+if __name__ == "__main__":
+    test_domains = [
+        "google.com",
+        "github.com",
+        "localhost"
+    ]
+    
+    check_domain_list(test_domains)
+Run the script:
+
+python3 dns_resolver.py
+Step 2: Simulate DNS Anomalies
+Create an anomaly simulator script:
+
+nano dns_anomaly_simulator.py
+Add this code:
+
+#!/usr/bin/env python3
+"""
+DNS Anomaly Simulator - Simulates various DNS issues
+"""
+
+import dns.resolver
+import random
+import time
+from datetime import datetime
+
+class DNSAnomalySimulator:
+    """Simulates various DNS anomalies for testing"""
+    
+    def __init__(self):
+        self.resolver = dns.resolver.Resolver()
+        # Common legitimate domains
+        self.legitimate_domains = [
+            "google.com", "github.com", "stackoverflow.com"
+        ]
+        # Suspicious patterns
+        self.suspicious_domains = [
+            "aksjdhfkjashdf.com",  # Random string
+            "google-login-verify.tk",  # Typosquatting
+            "192.168.1.1.nip.io"  # IP-based domain
+        ]
+    
+    def simulate_normal_query(self, domain):
+        """
+        Simulate a normal DNS query.
+        
+        Args:
+            domain (str): Domain to query
+        
+        Returns:
+            dict: Query results with metadata
+        """
+        result = {
+            'domain': domain,
+            'timestamp': datetime.now().isoformat(),
+            'anomaly_type': 'none',
+            'status': 'success',
+            'ips': []
+        }
+        
+        try:
+            answers = self.resolver.resolve(domain, 'A')
+            result['ips'] = [str(rdata) for rdata in answers]
+            result['response_time'] = random.uniform(0.01, 0.05)
+        except Exception as e:
+            result['status'] = 'failed'
+            result['error'] = str(e)
+        
+        return result
+    
+    def simulate_nxdomain(self):
+        """
+        Simulate NXDOMAIN (non-existent domain) anomaly.
+        
+        Returns:
+            dict: Anomaly details
+        """
+        fake_domain = f"nonexistent{random.randint(1000,9999)}.invalid"
+        
+        result = {
+            'domain': fake_domain,
+            'timestamp': datetime.now().isoformat(),
+            'anomaly_type': 'NXDOMAIN',
+            'status': 'anomaly_detected',
+            'description': 'Domain does not exist'
+        }
+        
+        return result
+    
+    def simulate_fast_flux(self, domain):
+        """
+        Simulate Fast Flux DNS (rapidly changing IPs).
+        
+        Args:
+            domain (str): Domain to simulate
+        
+        Returns:
+            list: Multiple query results showing IP changes
+        """
+        results = []
+        
+        # Simulate multiple queries with changing IPs
+        for i in range(3):
+            result = {
+                'domain': domain,
+                'timestamp': datetime.now().isoformat(),
+                'anomaly_type': 'fast_flux',
+                'query_number': i + 1,
+                'ips': [f"192.0.2.{random.randint(1,254)}" 
+                       for _ in range(random.randint(2,5))]
+            }
+            results.append(result)
+            time.sleep(0.5)
+        
+        return results
+    
+    def simulate_dga_domain(self):
+        """
+        Simulate Domain Generation Algorithm (DGA) pattern.
+        
+        Returns:
+            dict: DGA domain characteristics
+        """
+        # Generate random-looking domain
+        length = random.randint(15, 30)
+        random_string = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz', k=length))
+        dga_domain = f"{random_string}.com"
+        
+        result = {
+            'domain': dga_domain,
+            'timestamp': datetime.now().isoformat(),
+            'anomaly_type': 'DGA_pattern',
+            'status': 'suspicious',
+            'entropy': 'high',
+            'description': 'Domain matches DGA pattern (high entropy, random characters)'
+        }
+        
+        return result
+
+def run_simulation():
+    """Run various DNS anomaly simulations"""
+    
+    simulator = DNSAnomalySimulator()
+    
+    print("\n" + "="*70)
+    print("DNS ANOMALY SIMULATOR")
+    print("="*70 + "\n")
+    
+    # Simulation 1: Normal queries
+    print("[1] Normal DNS Queries")
+    print("-" * 70)
+    for domain in simulator.legitimate_domains[:2]:
+        result = simulator.simulate_normal_query(domain)
+        print(f"Domain: {result['domain']}")
+        print(f"Status: {result['status']}")
+        if result['ips']:
+            print(f"IPs: {', '.join(result['ips'])}")
+        print()
+    
+    # Simulation 2: NXDOMAIN
+    print("\n[2] NXDOMAIN Anomaly (Non-existent Domain)")
+    print("-" * 70)
+    nxdomain_result = simulator.simulate_nxdomain()
+    print(f"Domain: {nxdomain_result['domain']}")
+    print(f"Anomaly: {nxdomain_result['anomaly_type']}")
+    print(f"Description: {nxdomain_result['description']}")
+    
+    # Simulation 3: Fast Flux
+    print("\n[3] Fast Flux DNS Anomaly")
+    print("-" * 70)
+    print("Querying same domain multiple times...")
+    flux_results = simulator.simulate_fast_flux("suspicious-site.com")
+    for result in flux_results:
+        print(f"Query {result['query_number']}: {len(result['ips'])} IPs -> {result['ips'][:2]}...")
+    print("Notice: IPs change rapidly (potential malware C&C)")
+    
+    # Simulation 4: DGA Pattern
+    print("\n[4] DGA (Domain Generation Algorithm) Pattern")
+    print("-" * 70)
+    dga_result = simulator.simulate_dga_domain()
+    print(f"Domain: {dga_result['domain']}")
+    print(f"Anomaly: {dga_result['anomaly_type']}")
+    print(f"Description: {dga_result['description']}")
+    
+    print("\n" + "="*70)
+    print("Simulation Complete")
+    print("="*70 + "\n")
+
+if __name__ == "__main__":
+    run_simulation()
+Run the simulator:
+
+python3 dns_anomaly_simulator.py
+Step 3: Create Anomaly Detector
+Build a detector to identify suspicious DNS patterns:
+
+nano dns_anomaly_detector.py
+Add this code:
+
+#!/usr/bin/env python3
+"""
+DNS Anomaly Detector - Detects suspicious DNS patterns
+"""
+
+import dns.resolver
+import re
+from collections import Counter
+
+class DNSAnomalyDetector:
+    """Detects anomalies in DNS queries and responses"""
+    
+    def __init__(self):
+        self.resolver = dns.resolver.Resolver()
+    
+    def calculate_entropy(self, domain):
+        """
+        Calculate Shannon entropy of domain name.
+        High entropy suggests random/generated domains.
+        
+        Args:
+            domain (str): Domain name
+        
+        Returns:
+            float: Entropy value
+        """
+        # TODO: Remove TLD for analysis
+        domain_part = domain.split('.')[0]
+        
+        # TODO: Calculate character frequency
+        if not domain_part:
+            return 0
+        
+        # Count character occurrences
+        counter = Counter(domain_part)
+        length = len(domain_part)
+        
+        # Calculate entropy
+        entropy = 0
+        for count in counter.values():
+            probability = count / length
+            if probability > 0:
+                entropy -= probability * (probability.bit_length() - 1)
+        
+        return entropy
+    
+    def check_domain_length(self, domain):
+        """
+        Check if domain length is suspicious.
+        
+        Args:
+            domain (str): Domain name
+        
+        Returns:
+            dict: Analysis result
+        """
+        domain_part = domain.split('.')[0]
+        length = len(domain_part)
+        
+        result = {
+            'check': 'domain_length',
+            'length': length,
+            'suspicious': False,
+            'reason': ''
+        }
+        
+        # TODO: Flag unusually long domains (potential DGA)
+        if length > 20:
+            result['suspicious'] = True
+            result['reason'] = 'Unusually long domain (possible DGA)'
+        elif length < 3:
+            result['suspicious'] = True
+            result['reason'] = 'Unusually short domain'
+        
+        return result
+    
+    def check_entropy(self, domain):
+        """
+        Check domain entropy for randomness.
+        
+        Args:
+            domain (str): Domain name
+        
+        Returns:
+            dict: Analysis result
+        """
+        entropy = self.calculate_entropy(domain)
+        
+        result = {
+            'check': 'entropy',
+            'entropy': round(entropy, 2),
+            'suspicious': False,
+            'reason': ''
+        }
+        
+        # TODO: High entropy suggests random generation
+        if entropy > 3.5:
+            result['suspicious'] = True
+            result['reason'] = 'High entropy suggests DGA or random generation'
+        
+        return result
+    
+    def check_numeric_ratio(self, domain):
+        """
+        Check ratio of numbers in domain.
+        
+        Args:
+            domain (str): Domain name
+        
+        Returns:
+            dict: Analysis result
+        """
+        domain_part = domain.split('.')[0]
+        if not domain_part:
+            return {'check': 'numeric_ratio', 'suspicious': False}
+        
+        numeric_count = sum(c.isdigit() for c in domain_part)
+        ratio = numeric_count / len(domain_part)
+        
+        result = {
+            'check': 'numeric_ratio',
+            'ratio': round(ratio, 2),
+            'suspicious': False,
+            'reason': ''
+        }
+        
+        # TODO: High number ratio is suspicious
+        if ratio > 0.3:
+            result['suspicious'] = True
+            result['reason'] = 'High numeric ratio (unusual for legitimate domains)'
+        
+        return result
+    
+    def analyze_domain(self, domain):
+        """
+        Perform complete analysis on a domain.
+        
+        Args:
+            domain (str): Domain to analyze
+        
+        Returns:
+            dict: Complete analysis results
+        """
+        print(f"\nAnalyzing: {domain}")
+        print("-" * 60)
+        
+        checks = [
+            self.check_domain_length(domain),
+            self.check_entropy(domain),
+            self.check_numeric_ratio(domain)
+        ]
+        
+        suspicious_count = sum(1 for check in checks if check['suspicious'])
+        
+        # Display results
+        for check in checks:
+            status = "[SUSPICIOUS]" if check['suspicious'] else "[OK]"
+            print(f"{status} {check['check']}: ", end="")
+            
+            if 'length' in check:
+                print(f"Length = {check['length']}")
+            elif 'entropy' in check:
+                print(f"Entropy = {check['entropy']}")
+            elif 'ratio' in check:
+                print(f"Ratio = {check['ratio']}")
+            
+            if check.get('reason'):
+                print(f"  Reason: {check['reason']}")
+        
+        # Overall assessment
+        print(f"\nOverall: ", end="")
+        if suspicious_count >= 2:
+            print("HIGH RISK - Multiple anomalies detected")
+        elif suspicious_count == 1:
+            print("MEDIUM RISK - One anomaly detected")
+        else:
+            print("LOW RISK - No significant anomalies")
+        
+        return checks
+
+def main():
+    """Main detection routine"""
+    
+    detector = DNSAnomalyDetector()
+    
+    print("\n" + "="*70)
+    print("DNS ANOMALY DETECTOR")
+    print("="*70)
+    
+    # Test domains
+    test_domains = [
+        "google.com",  # Legitimate
+        "github.com",  # Legitimate
+        "aksjdhfkjashdfkjhaskjdfh.com",  # High entropy (DGA-like)
+        "test12345678901234567890.com",  # Long with numbers
+        "abc123xyz789.com"  # High numeric ratio
+    ]
+    
+    for domain in test_domains:
+        detector.analyze_domain(domain)
+    
+    print("\n" + "="*70)
+    print("Detection Complete")
+    print("="*70 + "\n")
+
+if __name__ == "__main__":
+    main()
+Run the detector:
+
+python3 dns_anomaly_detector.py
+Verification
+Verify DNS Resolution
+# Test basic DNS queries work
+dig +short google.com
+
+# Verify Python DNS library
+python3 -c "import dns.resolver; r = dns.resolver.Resolver(); print(r.resolve('google.com', 'A')[0])"
+Verify Scripts
+# Check all scripts are present
+ls -lh ~/dns-lab/
+
+# Run each script and verify output
+python3 dns_resolver.py
+python3 dns_anomaly_simulator.py
+python3 dns_anomaly_detector.py
+Expected Outputs
+dns_resolver.py: Should display IP addresses for test domains
+dns_anomaly_simulator.py: Should show 4 types of simulated anomalies
+dns_anomaly_detector.py: Should flag suspicious domains with HIGH/MEDIUM/LOW risk ratings
+Troubleshooting
+Issue: dig: command not found
+
+Solution: sudo apt install -y dnsutils
+Issue: Python DNS import error
+
+Solution: pip3 install --user dnspython
+Issue: Permission denied on scripts
+
+Solution: chmod +x script_name.py
+Issue: DNS resolution timeout
+
+Solution: Check internet connectivity with ping 8.8.8.8
+Conclusion
+You have successfully:
+
+Performed DNS queries using command-line tools
+Built a Python-based DNS resolver
+Simulated common DNS anomalies (NXDOMAIN, Fast Flux, DGA patterns)
+Created a detector to identify suspicious DNS behavior
+Real-World Significance: DNS anomalies often indicate security threats like malware command-and-control servers, phishing sites, or data exfiltration. The detection techniques you learned are used by security teams to identify compromised systems and block malicious domains before they cause damage.
+
+Next Steps: Enhance your detector by adding more checks (typosquatting detection, DNS tunneling identification) or integrate it with log monitoring systems.
