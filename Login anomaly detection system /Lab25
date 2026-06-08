@@ -1,0 +1,402 @@
+Login Anomaly Detection System
+Prerequisites
+Basic Linux command line knowledge
+Understanding of log files and text processing
+Familiarity with Python basics (variables, loops, functions)
+SSH access to a Linux machine
+Learning Objectives
+By completing this lab, you will:
+
+Understand how to analyze authentication logs for security monitoring
+Identify abnormal login patterns based on time, location, and frequency
+Build a simple anomaly detection system using Python
+Learn to parse and process system logs programmatically
+Environment Setup
+Step 1: Install Required Tools
+# Update package manager
+sudo apt update
+
+# Install Python and pip
+sudo apt install -y python3 python3-pip
+
+# Install required Python libraries
+pip3 install pandas
+Step 2: Create Working Directory
+# Create lab directory
+mkdir ~/login-anomaly-lab
+cd ~/login-anomaly-lab
+Step 3: Generate Sample Login Data
+Since we need login data to analyze, we'll create a sample dataset that simulates real authentication logs.
+
+# Create sample log generator script
+nano generate_logs.py
+Copy this script (complete - for data generation only):
+
+#!/usr/bin/env python3
+import random
+from datetime import datetime, timedelta
+
+# Sample data
+users = ['alice', 'bob', 'charlie', 'admin']
+ips = ['192.168.1.10', '192.168.1.20', '10.0.0.5', '203.0.113.45', '198.51.100.78']
+locations = ['NewYork', 'LosAngeles', 'Chicago', 'Houston', 'Phoenix']
+
+# Generate normal logins
+logs = []
+start_date = datetime.now() - timedelta(days=7)
+
+for day in range(7):
+    for user in users[:3]:  # Normal users
+        # Normal business hours: 8 AM - 6 PM
+        for _ in range(random.randint(2, 5)):
+            hour = random.randint(8, 18)
+            timestamp = start_date + timedelta(days=day, hours=hour, minutes=random.randint(0, 59))
+            ip = random.choice(ips[:3])  # Local IPs
+            location = random.choice(locations[:2])
+            logs.append(f"{timestamp.strftime('%Y-%m-%d %H:%M:%S')},{user},{ip},{location},success")
+
+# Add anomalies
+# Anomaly 1: Late night login
+timestamp = datetime.now() - timedelta(days=1, hours=2)
+logs.append(f"{timestamp.strftime('%Y-%m-%d %H:%M:%S')},alice,192.168.1.10,NewYork,success")
+
+# Anomaly 2: Unusual location
+timestamp = datetime.now() - timedelta(hours=5)
+logs.append(f"{timestamp.strftime('%Y-%m-%d %H:%M:%S')},bob,203.0.113.45,Tokyo,success")
+
+# Anomaly 3: High frequency (brute force attempt)
+for i in range(15):
+    timestamp = datetime.now() - timedelta(minutes=30-i)
+    logs.append(f"{timestamp.strftime('%Y-%m-%d %H:%M:%S')},admin,198.51.100.78,Unknown,failed")
+
+# Write to file
+with open('auth_logs.csv', 'w') as f:
+    f.write("timestamp,username,ip_address,location,status\n")
+    for log in sorted(logs):
+        f.write(log + "\n")
+
+print("Generated auth_logs.csv with sample data")
+Run the generator:
+
+python3 generate_logs.py
+Task 1: Parse and Load Login Data
+Create a Python script to read and process the authentication logs.
+
+nano anomaly_detector.py
+Add this starter code:
+
+#!/usr/bin/env python3
+import pandas as pd
+from datetime import datetime, time
+from collections import defaultdict
+
+class LoginAnomalyDetector:
+    '''
+    Detects anomalous login behavior based on time, location, and frequency.
+    '''
+    
+    def __init__(self, log_file):
+        '''
+        Initialize the detector with a log file.
+        
+        Args:
+            log_file: Path to CSV file containing login logs
+        '''
+        self.log_file = log_file
+        self.df = None
+        self.user_profiles = {}
+    
+    def load_logs(self):
+        '''
+        Load and parse the authentication logs from CSV file.
+        
+        TODO: Read the CSV file into a pandas DataFrame
+        TODO: Convert timestamp column to datetime objects
+        TODO: Print the first few rows to verify
+        '''
+        # Read CSV file
+        self.df = pd.read_csv(self.log_file)
+        
+        # Convert timestamp to datetime
+        self.df['timestamp'] = pd.to_datetime(self.df['timestamp'])
+        
+        # Extract hour for time-based analysis
+        self.df['hour'] = self.df['timestamp'].dt.hour
+        
+        print(f"Loaded {len(self.df)} login records")
+        print("\nSample data:")
+        print(self.df.head())
+    
+    def build_user_profiles(self):
+        '''
+        Build normal behavior profiles for each user.
+        
+        TODO: For each user, collect their typical login hours
+        TODO: Collect their typical locations
+        TODO: Store this information in user_profiles dictionary
+        '''
+        # Group by username
+        pass  # Remove this and implement
+        
+        # Hint: Use self.df.groupby('username')
+        # Store typical hours and locations for each user
+    
+    def detect_time_anomalies(self):
+        '''
+        Detect logins at unusual times (outside business hours).
+        
+        Returns:
+            List of anomalous login records
+        '''
+        # TODO: Define business hours (e.g., 8 AM to 6 PM)
+        # TODO: Filter logins outside these hours
+        # TODO: Return the anomalous records
+        
+        business_start = 8
+        business_end = 18
+        
+        pass  # Implement detection logic
+    
+    def detect_location_anomalies(self):
+        '''
+        Detect logins from unusual locations.
+        
+        Returns:
+            List of anomalous login records
+        '''
+        # TODO: For each user, check if login location is in their profile
+        # TODO: Flag logins from new/unusual locations
+        
+        pass  # Implement detection logic
+    
+    def detect_frequency_anomalies(self, time_window=30, threshold=10):
+        '''
+        Detect high-frequency login attempts (potential brute force).
+        
+        Args:
+            time_window: Time window in minutes
+            threshold: Number of attempts to trigger alert
+        
+        Returns:
+            List of users with suspicious activity
+        '''
+        # TODO: Count login attempts per user in time windows
+        # TODO: Flag users exceeding the threshold
+        
+        pass  # Implement detection logic
+    
+    def generate_report(self):
+        '''
+        Generate a comprehensive anomaly detection report.
+        '''
+        print("\n" + "="*60)
+        print("LOGIN ANOMALY DETECTION REPORT")
+        print("="*60)
+        
+        # TODO: Call each detection method
+        # TODO: Display results in a readable format
+        
+        pass  # Implement reporting logic
+
+# Main execution
+if __name__ == "__main__":
+    detector = LoginAnomalyDetector('auth_logs.csv')
+    detector.load_logs()
+    # TODO: Call other methods to complete analysis
+Task 2: Implement Anomaly Detection Logic
+Now implement the detection methods. Here's guidance for each:
+
+Step 1: Build User Profiles
+Add this implementation to build_user_profiles():
+
+def build_user_profiles(self):
+    '''Build normal behavior profiles for each user.'''
+    
+    # Filter only successful logins for baseline
+    successful = self.df[self.df['status'] == 'success']
+    
+    for username in successful['username'].unique():
+        user_data = successful[successful['username'] == username]
+        
+        # TODO: Calculate typical login hours for this user
+        # Hint: user_data['hour'].tolist()
+        typical_hours = []  # Implement this
+        
+        # TODO: Get typical locations for this user
+        # Hint: user_data['location'].unique().tolist()
+        typical_locations = []  # Implement this
+        
+        # Store profile
+        self.user_profiles[username] = {
+            'typical_hours': typical_hours,
+            'typical_locations': typical_locations,
+            'login_count': len(user_data)
+        }
+    
+    print(f"\nBuilt profiles for {len(self.user_profiles)} users")
+Step 2: Detect Time Anomalies
+Add this implementation:
+
+def detect_time_anomalies(self):
+    '''Detect logins at unusual times.'''
+    
+    business_start = 8
+    business_end = 18
+    
+    # TODO: Filter records where hour is outside business hours
+    # Hint: Use boolean indexing with self.df
+    anomalies = self.df[
+        (self.df['hour'] < business_start) | 
+        (self.df['hour'] > business_end)
+    ]
+    
+    return anomalies
+Step 3: Detect Location Anomalies
+Add this implementation:
+
+def detect_location_anomalies(self):
+    '''Detect logins from unusual locations.'''
+    
+    anomalies = []
+    
+    for idx, row in self.df.iterrows():
+        username = row['username']
+        location = row['location']
+        
+        # TODO: Check if user has a profile
+        if username in self.user_profiles:
+            # TODO: Check if location is in typical locations
+            typical_locs = self.user_profiles[username]['typical_locations']
+            
+            if location not in typical_locs:
+                anomalies.append(row)
+    
+    return pd.DataFrame(anomalies) if anomalies else pd.DataFrame()
+Step 4: Detect Frequency Anomalies
+Add this implementation:
+
+def detect_frequency_anomalies(self, time_window=30, threshold=10):
+    '''Detect high-frequency login attempts.'''
+    
+    # Sort by timestamp
+    df_sorted = self.df.sort_values('timestamp')
+    
+    suspicious_users = defaultdict(int)
+    
+    # TODO: For each user, count attempts in time windows
+    for username in df_sorted['username'].unique():
+        user_logs = df_sorted[df_sorted['username'] == username]
+        
+        # Count attempts in last time_window minutes
+        recent = user_logs[
+            user_logs['timestamp'] >= (datetime.now() - pd.Timedelta(minutes=time_window))
+        ]
+        
+        if len(recent) >= threshold:
+            suspicious_users[username] = len(recent)
+    
+    return suspicious_users
+Step 5: Complete the Report
+Add this implementation:
+
+def generate_report(self):
+    '''Generate comprehensive anomaly detection report.'''
+    
+    print("\n" + "="*60)
+    print("LOGIN ANOMALY DETECTION REPORT")
+    print("="*60)
+    
+    # Build profiles first
+    self.build_user_profiles()
+    
+    # Time anomalies
+    print("\n[1] TIME-BASED ANOMALIES (Outside Business Hours)")
+    print("-" * 60)
+    time_anomalies = self.detect_time_anomalies()
+    if len(time_anomalies) > 0:
+        print(f"Found {len(time_anomalies)} suspicious login(s):")
+        for _, row in time_anomalies.iterrows():
+            print(f"  - {row['username']} at {row['timestamp']} from {row['location']}")
+    else:
+        print("No time-based anomalies detected.")
+    
+    # Location anomalies
+    print("\n[2] LOCATION-BASED ANOMALIES (Unusual Locations)")
+    print("-" * 60)
+    location_anomalies = self.detect_location_anomalies()
+    if len(location_anomalies) > 0:
+        print(f"Found {len(location_anomalies)} suspicious login(s):")
+        for _, row in location_anomalies.iterrows():
+            print(f"  - {row['username']} from {row['location']} (IP: {row['ip_address']})")
+    else:
+        print("No location-based anomalies detected.")
+    
+    # Frequency anomalies
+    print("\n[3] FREQUENCY-BASED ANOMALIES (Potential Brute Force)")
+    print("-" * 60)
+    freq_anomalies = self.detect_frequency_anomalies()
+    if freq_anomalies:
+        print(f"Found {len(freq_anomalies)} suspicious user(s):")
+        for user, count in freq_anomalies.items():
+            print(f"  - {user}: {count} attempts in last 30 minutes")
+    else:
+        print("No frequency-based anomalies detected.")
+    
+    print("\n" + "="*60)
+Step 6: Update Main Execution
+Update the main block:
+
+if __name__ == "__main__":
+    detector = LoginAnomalyDetector('auth_logs.csv')
+    detector.load_logs()
+    detector.generate_report()
+Verification
+Step 1: Run the Anomaly Detector
+python3 anomaly_detector.py
+Expected output should show:
+
+Loaded login records count
+Sample data preview
+User profiles built
+Three types of anomalies detected with details
+Step 2: Verify Detection Accuracy
+Check that the system detected:
+
+At least one time-based anomaly (late-night login)
+At least one location-based anomaly (unusual location)
+At least one frequency-based anomaly (multiple failed attempts)
+Step 3: Test with Custom Thresholds
+Modify the detector to use different thresholds:
+
+# Edit the script to test different parameters
+nano anomaly_detector.py
+Change the frequency detection call:
+
+freq_anomalies = self.detect_frequency_anomalies(time_window=60, threshold=5)
+Run again and observe different results.
+
+Troubleshooting
+Issue: ModuleNotFoundError for pandas
+
+Solution: pip3 install --user pandas
+Issue: Empty DataFrame warnings
+
+Solution: Check that auth_logs.csv exists and has data
+Issue: No anomalies detected
+
+Solution: Verify the sample data was generated correctly with cat auth_logs.csv
+Conclusion
+You have successfully built a login anomaly detection system that:
+
+Parses authentication logs from CSV files
+Builds baseline behavior profiles for users
+Detects three types of anomalies: unusual times, locations, and frequencies
+Generates comprehensive security reports
+This type of system is fundamental to Security Information and Event Management (SIEM) platforms used by cybersecurity professionals to identify potential security breaches, compromised accounts, and brute-force attacks. In production environments, these systems process millions of log entries in real-time and integrate with alerting systems to notify security teams immediately.
+
+Key Takeaways:
+
+Anomaly detection relies on establishing normal behavior baselines
+Multiple detection methods provide comprehensive coverage
+Time-series analysis helps identify patterns in security data
+Automated log analysis is essential for modern cybersecurity operations
