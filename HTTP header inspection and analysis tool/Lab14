@@ -1,0 +1,302 @@
+HTTP Header Inspection and Analysis Tool
+Prerequisites
+Basic understanding of HTTP protocol
+Familiarity with Linux command line
+Basic knowledge of web security concepts
+Python 3.x installed on your system
+Learning Objectives
+By the end of this lab, you will be able to:
+
+Extract and parse HTTP headers from web servers
+Identify missing security headers
+Detect insecure header configurations
+Create a basic security analysis report
+Environment Setup
+Your Linux machine is provided via the "Start Lab" button. You'll install all necessary tools during this lab.
+
+Install Required Tools
+# Update package manager
+sudo apt update
+
+# Install Python3 and pip if not already installed
+sudo apt install python3 python3-pip -y
+
+# Install required Python libraries
+pip3 install requests colorama
+Verify Installation
+# Check Python version
+python3 --version
+
+# Verify requests library
+python3 -c "import requests; print('Requests library installed successfully')"
+Task 1: Build HTTP Header Extraction Tool
+Step 1: Create Project Directory
+# Create working directory
+mkdir ~/http-header-analyzer
+cd ~/http-header-analyzer
+
+# Create main script file
+touch header_analyzer.py
+chmod +x header_analyzer.py
+Step 2: Implement Header Extraction Function
+Open header_analyzer.py in your preferred text editor and add the following starter code:
+
+#!/usr/bin/env python3
+"""
+HTTP Header Security Analyzer
+Extracts and analyzes HTTP headers for security issues
+"""
+
+import requests
+import sys
+from colorama import Fore, Style, init
+
+# Initialize colorama for colored output
+init(autoreset=True)
+
+def fetch_headers(url):
+    """
+    Fetch HTTP headers from a given URL
+    
+    Args:
+        url (str): Target URL to analyze
+    
+    Returns:
+        dict: Response headers or None if error
+    """
+    try:
+        # TODO: Add timeout parameter (10 seconds)
+        # TODO: Use requests.get() to fetch the URL
+        # TODO: Return response.headers
+        pass
+    except requests.exceptions.RequestException as e:
+        print(f"{Fore.RED}Error fetching URL: {e}")
+        return None
+
+def display_headers(headers):
+    """
+    Display all HTTP headers in a formatted way
+    
+    Args:
+        headers (dict): HTTP response headers
+    """
+    print(f"\n{Fore.CYAN}{'='*60}")
+    print(f"{Fore.CYAN}HTTP HEADERS FOUND")
+    print(f"{Fore.CYAN}{'='*60}\n")
+    
+    # TODO: Loop through headers dictionary
+    # TODO: Print each header name and value
+    pass
+Step 3: Complete the Header Extraction
+Add your implementation to the fetch_headers function:
+
+# Example implementation hint:
+response = requests.get(url, timeout=10, allow_redirects=True)
+return response.headers
+Task 2: Implement Security Header Analysis
+Step 1: Define Security Headers
+Add the following code to define critical security headers:
+
+# Security headers that should be present
+SECURITY_HEADERS = {
+    'Strict-Transport-Security': 'Enforces HTTPS connections',
+    'X-Frame-Options': 'Prevents clickjacking attacks',
+    'X-Content-Type-Options': 'Prevents MIME-type sniffing',
+    'Content-Security-Policy': 'Controls resource loading',
+    'X-XSS-Protection': 'Enables XSS filtering',
+    'Referrer-Policy': 'Controls referrer information',
+    'Permissions-Policy': 'Controls browser features'
+}
+
+# Insecure header values to flag
+INSECURE_VALUES = {
+    'X-Frame-Options': ['ALLOW'],
+    'X-XSS-Protection': ['0'],
+    'Strict-Transport-Security': []  # Check for low max-age
+}
+Step 2: Create Security Analysis Function
+def analyze_security_headers(headers):
+    """
+    Analyze headers for security issues
+    
+    Args:
+        headers (dict): HTTP response headers
+    
+    Returns:
+        tuple: (missing_headers, insecure_headers)
+    """
+    missing = []
+    insecure = []
+    
+    # TODO: Check for missing security headers
+    # Loop through SECURITY_HEADERS
+    # If header not in response headers, add to missing list
+    
+    # TODO: Check for insecure configurations
+    # Check X-XSS-Protection value
+    # Check X-Frame-Options value
+    # Check Strict-Transport-Security max-age
+    
+    return missing, insecure
+
+def display_security_report(missing, insecure):
+    """
+    Display security analysis report
+    
+    Args:
+        missing (list): List of missing security headers
+        insecure (list): List of insecure header configurations
+    """
+    print(f"\n{Fore.YELLOW}{'='*60}")
+    print(f"{Fore.YELLOW}SECURITY ANALYSIS REPORT")
+    print(f"{Fore.YELLOW}{'='*60}\n")
+    
+    # Display missing headers
+    if missing:
+        print(f"{Fore.RED}Missing Security Headers ({len(missing)}):")
+        # TODO: Loop through missing headers and print each one
+        # Include the description from SECURITY_HEADERS
+    else:
+        print(f"{Fore.GREEN}All critical security headers present!")
+    
+    # Display insecure configurations
+    if insecure:
+        print(f"\n{Fore.RED}Insecure Configurations Found ({len(insecure)}):")
+        # TODO: Loop through insecure headers and print details
+    else:
+        print(f"\n{Fore.GREEN}No insecure configurations detected!")
+Step 3: Create Main Function
+def main():
+    """
+    Main function to run the header analyzer
+    """
+    if len(sys.argv) < 2:
+        print(f"{Fore.YELLOW}Usage: python3 header_analyzer.py <URL>")
+        print(f"{Fore.YELLOW}Example: python3 header_analyzer.py https://example.com")
+        sys.exit(1)
+    
+    url = sys.argv[1]
+    
+    # Add https:// if not present
+    if not url.startswith(('http://', 'https://')):
+        url = 'https://' + url
+    
+    print(f"{Fore.CYAN}Analyzing: {url}\n")
+    
+    # TODO: Call fetch_headers()
+    # TODO: Check if headers were retrieved successfully
+    # TODO: Call display_headers()
+    # TODO: Call analyze_security_headers()
+    # TODO: Call display_security_report()
+
+if __name__ == "__main__":
+    main()
+Step 4: Test Your Tool
+# Test with a well-known website
+python3 header_analyzer.py https://example.com
+
+# Test with another site
+python3 header_analyzer.py github.com
+Verification
+Test 1: Basic Functionality
+# Your tool should successfully fetch headers
+python3 header_analyzer.py https://www.google.com
+Expected output should include:
+
+List of HTTP headers received
+Security analysis report
+Missing headers highlighted in red
+Present headers noted
+Test 2: Create Test Server (Optional)
+Create a simple test server to verify detection:
+
+# Create test_server.py
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+
+class CustomHandler(SimpleHTTPRequestHandler):
+    def end_headers(self):
+        # Add only one security header for testing
+        self.send_header('X-Content-Type-Options', 'nosniff')
+        SimpleHTTPRequestHandler.end_headers(self)
+
+# Run on port 8000
+HTTPServer(('', 8000), CustomHandler).serve_forever()
+# In one terminal, run:
+python3 test_server.py
+
+# In another terminal, test:
+python3 header_analyzer.py http://localhost:8000
+Test 3: Verify Detection Accuracy
+Your tool should correctly identify:
+
+Missing security headers (at least 5-6 for most sites)
+Present security headers
+Color-coded output (red for issues, green for good)
+Expected Outcomes
+After completing this lab, you should have:
+
+A working HTTP header extraction tool
+Automated security header analysis capability
+Clear reporting of security issues
+Understanding of critical HTTP security headers
+Sample Output Format
+Analyzing: https://example.com
+
+============================================================
+HTTP HEADERS FOUND
+============================================================
+
+Content-Type: text/html; charset=UTF-8
+Server: nginx
+X-Content-Type-Options: nosniff
+
+============================================================
+SECURITY ANALYSIS REPORT
+============================================================
+
+Missing Security Headers (5):
+  - Strict-Transport-Security: Enforces HTTPS connections
+  - X-Frame-Options: Prevents clickjacking attacks
+  - Content-Security-Policy: Controls resource loading
+  ...
+
+Insecure Configurations Found (0):
+No insecure configurations detected!
+Troubleshooting Tips
+Issue: Module Not Found Error
+# Reinstall required libraries
+pip3 install --user requests colorama
+Issue: Connection Timeout
+# Increase timeout in fetch_headers function
+response = requests.get(url, timeout=30)
+Issue: SSL Certificate Errors
+# Add verify=False parameter (for testing only)
+response = requests.get(url, timeout=10, verify=False)
+Issue: Permission Denied
+# Make script executable
+chmod +x header_analyzer.py
+Conclusion
+You have successfully created an HTTP header inspection and analysis tool that:
+
+Extracts HTTP headers from any web server
+Identifies missing security headers critical for web application security
+Detects insecure header configurations
+Provides clear, actionable security reports
+This tool is valuable for:
+
+Security audits and assessments
+Compliance checking
+Web application hardening
+Learning about HTTP security best practices
+Key Takeaways:
+
+Security headers are the first line of defense for web applications
+Missing headers like CSP and HSTS leave applications vulnerable
+Automated tools help identify security gaps quickly
+Regular header audits should be part of security practices
+Next Steps:
+
+Extend the tool to check multiple URLs from a file
+Add JSON output format for integration with other tools
+Implement severity scoring for different header issues
+Create automated remediation suggestions
