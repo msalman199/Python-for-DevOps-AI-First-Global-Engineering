@@ -1,0 +1,416 @@
+Event Alert Response Processing Pipeline
+Prerequisites
+Basic Linux command-line knowledge
+Understanding of file operations and text processing
+Familiarity with basic security concepts (logs, alerts, threats)
+Python 3.x basics (variables, functions, conditionals)
+Learning Objectives
+By completing this lab, you will:
+
+Build an event-driven security workflow using open-source tools
+Process security events from log files
+Apply rule-based detection logic to identify threats
+Generate alerts and automated responses based on security rules
+Environment Setup
+Al Nafi provides a bare-metal Linux machine. Click Start Lab to begin.
+
+Install Required Tools
+# Update package manager
+sudo apt update
+
+# Install Python 3 and pip
+sudo apt install -y python3 python3-pip
+
+# Install required Python libraries
+pip3 install pyyaml watchdog
+
+# Create lab directory
+mkdir -p ~/security-pipeline
+cd ~/security-pipeline
+Task 1: Create Event Processing Components
+Step 1: Set Up Directory Structure
+# Create necessary directories
+mkdir -p logs rules alerts responses
+
+# Create sample log file
+touch logs/security_events.log
+Step 2: Create Security Rules Configuration
+Create a rules file that defines what to look for:
+
+nano rules/security_rules.yaml
+Add the following content:
+
+rules:
+  - id: 1
+    name: "Failed Login Attempts"
+    pattern: "FAILED_LOGIN"
+    threshold: 3
+    severity: "HIGH"
+    response: "block_ip"
+    
+  - id: 2
+    name: "Suspicious File Access"
+    pattern: "UNAUTHORIZED_ACCESS"
+    threshold: 1
+    severity: "CRITICAL"
+    response: "alert_admin"
+    
+  - id: 3
+    name: "Port Scan Detected"
+    pattern: "PORT_SCAN"
+    threshold: 5
+    severity: "MEDIUM"
+    response: "log_only"
+Save and exit (Ctrl+X, Y, Enter).
+
+Step 3: Create Event Processor Script
+Create the main processing script:
+
+nano event_processor.py
+Add the following code:
+
+#!/usr/bin/env python3
+"""
+Event Alert Response Processing Pipeline
+Monitors security events, applies rules, and generates responses
+"""
+
+import yaml
+import json
+import time
+from datetime import datetime
+from collections import defaultdict
+
+class EventProcessor:
+    def __init__(self, rules_file):
+        """
+        Initialize the event processor with security rules
+        
+        Args:
+            rules_file: Path to YAML file containing security rules
+        """
+        self.rules = self.load_rules(rules_file)
+        self.event_counter = defaultdict(lambda: defaultdict(int))
+        
+    def load_rules(self, rules_file):
+        """
+        Load security rules from YAML file
+        
+        Args:
+            rules_file: Path to rules configuration
+            
+        Returns:
+            List of rule dictionaries
+        """
+        # TODO: Open and read the YAML file
+        # TODO: Return the rules list from the loaded data
+        with open(rules_file, 'r') as f:
+            data = yaml.safe_load(f)
+            return data['rules']
+    
+    def parse_event(self, log_line):
+        """
+        Parse a log line into an event dictionary
+        
+        Args:
+            log_line: Raw log line string
+            
+        Returns:
+            Dictionary with event details or None if invalid
+        """
+        # TODO: Split log line by '|' delimiter
+        # TODO: Extract timestamp, source_ip, event_type, and details
+        # TODO: Return dictionary with parsed fields
+        try:
+            parts = log_line.strip().split('|')
+            if len(parts) >= 4:
+                return {
+                    'timestamp': parts[0].strip(),
+                    'source_ip': parts[1].strip(),
+                    'event_type': parts[2].strip(),
+                    'details': parts[3].strip()
+                }
+        except Exception as e:
+            print(f"Error parsing event: {e}")
+        return None
+    
+    def check_rules(self, event):
+        """
+        Check event against all security rules
+        
+        Args:
+            event: Parsed event dictionary
+            
+        Returns:
+            List of triggered rules
+        """
+        triggered = []
+        
+        # TODO: Loop through each rule
+        # TODO: Check if event_type contains rule pattern
+        # TODO: Update event counter for this IP and rule
+        # TODO: If threshold exceeded, add to triggered list
+        
+        for rule in self.rules:
+            if rule['pattern'] in event['event_type']:
+                key = f"{event['source_ip']}_{rule['id']}"
+                self.event_counter[key]['count'] += 1
+                
+                if self.event_counter[key]['count'] >= rule['threshold']:
+                    triggered.append(rule)
+                    
+        return triggered
+    
+    def generate_alert(self, event, rule):
+        """
+        Generate alert file for triggered rule
+        
+        Args:
+            event: Event that triggered the rule
+            rule: Security rule that was triggered
+        """
+        # TODO: Create alert dictionary with timestamp, rule info, and event
+        # TODO: Write alert to alerts/ directory as JSON file
+        
+        alert = {
+            'alert_time': datetime.now().isoformat(),
+            'rule_id': rule['id'],
+            'rule_name': rule['name'],
+            'severity': rule['severity'],
+            'source_ip': event['source_ip'],
+            'event_type': event['event_type'],
+            'details': event['details']
+        }
+        
+        filename = f"alerts/alert_{rule['id']}_{int(time.time())}.json"
+        with open(filename, 'w') as f:
+            json.dump(alert, f, indent=2)
+        
+        print(f"[ALERT] {rule['severity']} - {rule['name']} from {event['source_ip']}")
+    
+    def execute_response(self, event, rule):
+        """
+        Execute automated response action
+        
+        Args:
+            event: Event that triggered the response
+            rule: Rule containing response action
+        """
+        # TODO: Check rule's response type
+        # TODO: Execute appropriate response action
+        # TODO: Log response to responses/ directory
+        
+        response_action = rule['response']
+        response_log = {
+            'timestamp': datetime.now().isoformat(),
+            'action': response_action,
+            'source_ip': event['source_ip'],
+            'rule_id': rule['id']
+        }
+        
+        filename = f"responses/response_{int(time.time())}.json"
+        with open(filename, 'w') as f:
+            json.dump(response_log, f, indent=2)
+        
+        if response_action == 'block_ip':
+            print(f"[RESPONSE] Blocking IP: {event['source_ip']}")
+        elif response_action == 'alert_admin':
+            print(f"[RESPONSE] Alerting administrator about {event['source_ip']}")
+        elif response_action == 'log_only':
+            print(f"[RESPONSE] Logging event from {event['source_ip']}")
+    
+    def process_event(self, log_line):
+        """
+        Main processing function for each event
+        
+        Args:
+            log_line: Raw log line to process
+        """
+        # TODO: Parse the event
+        # TODO: Check against rules
+        # TODO: For each triggered rule, generate alert and execute response
+        
+        event = self.parse_event(log_line)
+        if not event:
+            return
+        
+        triggered_rules = self.check_rules(event)
+        
+        for rule in triggered_rules:
+            self.generate_alert(event, rule)
+            self.execute_response(event, rule)
+
+def main():
+    """Main execution function"""
+    print("=== Security Event Processing Pipeline ===")
+    print("Initializing processor...")
+    
+    processor = EventProcessor('rules/security_rules.yaml')
+    
+    print("Monitoring logs/security_events.log for events...")
+    print("Press Ctrl+C to stop\n")
+    
+    # Monitor log file for new events
+    try:
+        with open('logs/security_events.log', 'r') as f:
+            # Process existing events
+            for line in f:
+                if line.strip():
+                    processor.process_event(line)
+            
+            # Monitor for new events
+            while True:
+                line = f.readline()
+                if line:
+                    processor.process_event(line)
+                else:
+                    time.sleep(1)
+                    
+    except KeyboardInterrupt:
+        print("\n\nShutting down processor...")
+    except FileNotFoundError:
+        print("Error: Log file not found!")
+
+if __name__ == "__main__":
+    main()
+Save and exit.
+
+Step 4: Create Event Generator Script
+Create a script to simulate security events:
+
+nano generate_events.py
+Add this code:
+
+#!/usr/bin/env python3
+"""
+Security Event Generator - Simulates security events for testing
+"""
+
+import time
+import random
+from datetime import datetime
+
+def generate_event(event_type, source_ip, details):
+    """Generate a formatted log entry"""
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    return f"{timestamp} | {source_ip} | {event_type} | {details}\n"
+
+def main():
+    """Generate sample security events"""
+    
+    events = [
+        ("FAILED_LOGIN", "192.168.1.100", "User: admin"),
+        ("FAILED_LOGIN", "192.168.1.100", "User: root"),
+        ("FAILED_LOGIN", "192.168.1.100", "User: admin"),
+        ("UNAUTHORIZED_ACCESS", "10.0.0.50", "File: /etc/shadow"),
+        ("PORT_SCAN", "172.16.0.25", "Ports: 22,80,443,3306"),
+        ("PORT_SCAN", "172.16.0.25", "Ports: 8080,8443"),
+        ("NORMAL_LOGIN", "192.168.1.10", "User: john"),
+        ("PORT_SCAN", "172.16.0.25", "Ports: 21,23,25"),
+        ("PORT_SCAN", "172.16.0.25", "Ports: 3389,5900"),
+        ("PORT_SCAN", "172.16.0.25", "Ports: 1433,5432"),
+    ]
+    
+    print("Generating security events...")
+    
+    with open('logs/security_events.log', 'a') as f:
+        for event_type, ip, details in events:
+            log_entry = generate_event(event_type, ip, details)
+            f.write(log_entry)
+            print(f"Generated: {event_type} from {ip}")
+            time.sleep(1)
+    
+    print("\nEvent generation complete!")
+
+if __name__ == "__main__":
+    main()
+Save and exit.
+
+Task 2: Run and Test the Pipeline
+Step 1: Make Scripts Executable
+chmod +x event_processor.py generate_events.py
+Step 2: Start the Event Processor
+Open a terminal and run:
+
+python3 event_processor.py
+You should see:
+
+=== Security Event Processing Pipeline ===
+Initializing processor...
+Monitoring logs/security_events.log for events...
+Press Ctrl+C to stop
+Step 3: Generate Security Events
+Open a second terminal (or use tmux/screen):
+
+cd ~/security-pipeline
+python3 generate_events.py
+Step 4: Observe Alert Generation
+In the first terminal, you should see alerts being triggered:
+
+[ALERT] HIGH - Failed Login Attempts from 192.168.1.100
+[RESPONSE] Blocking IP: 192.168.1.100
+[ALERT] CRITICAL - Suspicious File Access from 10.0.0.50
+[RESPONSE] Alerting administrator about 10.0.0.50
+[ALERT] MEDIUM - Port Scan Detected from 172.16.0.25
+[RESPONSE] Logging event from 172.16.0.25
+Step 5: Stop the Processor
+Press Ctrl+C in the first terminal to stop the processor.
+
+Verification
+Check Generated Alerts
+# View alert files
+ls -lh alerts/
+
+# Read an alert
+cat alerts/alert_*.json | head -20
+Expected output shows JSON alerts with severity, source IP, and rule details.
+
+Check Response Logs
+# View response files
+ls -lh responses/
+
+# Read a response
+cat responses/response_*.json | head -20
+Expected output shows response actions taken.
+
+Verify Event Processing
+# Count total events processed
+wc -l logs/security_events.log
+
+# View all events
+cat logs/security_events.log
+Test Custom Events
+Add a manual event:
+
+echo "$(date '+%Y-%m-%d %H:%M:%S') | 203.0.113.50 | FAILED_LOGIN | User: test" >> logs/security_events.log
+Run the processor again briefly to see it detect the new event.
+
+Troubleshooting Tips
+Issue: "No module named 'yaml'"
+
+Solution: Run pip3 install pyyaml
+Issue: Processor doesn't detect new events
+
+Solution: Ensure log file exists and has proper permissions
+Issue: No alerts generated
+
+Solution: Check that event patterns match rules in security_rules.yaml
+Issue: Permission denied errors
+
+Solution: Ensure scripts are executable: chmod +x *.py
+Conclusion
+You have successfully built an event-driven security processing pipeline that:
+
+Monitors security event logs in real-time
+Applies rule-based detection logic to identify threats
+Generates structured alerts for security incidents
+Executes automated responses based on threat severity
+This pipeline demonstrates core concepts used in Security Information and Event Management (SIEM) systems, which are essential tools for cybersecurity professionals. You can extend this by adding more sophisticated rules, integrating with real log sources, or implementing actual blocking mechanisms.
+
+Key Skills Gained:
+
+Event-driven architecture design
+Rule-based threat detection
+Automated incident response
+Log parsing and analysis
+Next Steps: Enhance the pipeline with email notifications, database storage, or integration with real firewall rules for IP blocking.
