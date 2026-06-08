@@ -1,0 +1,389 @@
+Password Hashing and Verification System
+Prerequisites
+Basic understanding of Linux command line
+Familiarity with Python programming basics
+Understanding of what passwords are and why security matters
+Access to a Linux machine with internet connection
+Learning Objectives
+By the end of this lab, you will be able to:
+
+Understand why plain text password storage is dangerous
+Implement secure password hashing using industry-standard algorithms
+Apply salt to passwords to prevent rainbow table attacks
+Create a password verification system
+Test your implementation with real-world scenarios
+Environment Setup
+Step 1: Install Required Tools
+# Update package manager
+sudo apt update
+
+# Install Python3 and pip if not already installed
+sudo apt install python3 python3-pip -y
+
+# Install bcrypt library for password hashing
+pip3 install bcrypt
+Step 2: Create Working Directory
+# Create a directory for this lab
+mkdir ~/password-lab
+cd ~/password-lab
+Task 1: Understanding Password Security Basics
+Step 1: Create a Demonstration Script
+Create a file to show why plain text storage is dangerous:
+
+nano plain_text_demo.py
+Add the following code:
+
+# plain_text_demo.py
+# This demonstrates INSECURE password storage (DO NOT USE IN PRODUCTION)
+
+def store_password_insecure(username, password):
+    """
+    BAD PRACTICE: Storing passwords in plain text
+    """
+    with open('insecure_passwords.txt', 'a') as f:
+        f.write(f"{username}:{password}\n")
+    print(f"[INSECURE] Stored password for {username}")
+
+def verify_password_insecure(username, password):
+    """
+    BAD PRACTICE: Checking plain text passwords
+    """
+    try:
+        with open('insecure_passwords.txt', 'r') as f:
+            for line in f:
+                stored_user, stored_pass = line.strip().split(':')
+                if stored_user == username and stored_pass == password:
+                    return True
+        return False
+    except FileNotFoundError:
+        return False
+
+# Test the insecure method
+if __name__ == "__main__":
+    print("=== INSECURE PASSWORD STORAGE DEMO ===")
+    store_password_insecure("alice", "password123")
+    store_password_insecure("bob", "qwerty456")
+    
+    print("\nVerifying passwords:")
+    print(f"Alice login: {verify_password_insecure('alice', 'password123')}")
+    print(f"Bob wrong password: {verify_password_insecure('bob', 'wrong')}")
+    
+    print("\n[WARNING] Check insecure_passwords.txt to see the danger!")
+Step 2: Run and Observe
+# Run the insecure demo
+python3 plain_text_demo.py
+
+# View the stored passwords (THIS IS THE PROBLEM!)
+cat insecure_passwords.txt
+What you should see: Passwords stored in plain text, readable by anyone with file access.
+
+Task 2: Implement Secure Password Hashing
+Step 1: Create the Secure Password Manager
+Create a new file for secure password handling:
+
+nano secure_password_manager.py
+Add this starter code and complete the TODOs:
+
+# secure_password_manager.py
+import bcrypt
+import json
+import os
+
+class SecurePasswordManager:
+    """
+    A secure password manager using bcrypt for hashing and salting
+    """
+    
+    def __init__(self, storage_file='secure_passwords.json'):
+        """
+        Initialize the password manager
+        
+        Args:
+            storage_file: JSON file to store hashed passwords
+        """
+        self.storage_file = storage_file
+        self.users = self._load_users()
+    
+    def _load_users(self):
+        """
+        Load existing users from storage file
+        
+        Returns:
+            Dictionary of users and their hashed passwords
+        """
+        # TODO: Check if file exists
+        # TODO: If exists, load and return JSON data
+        # TODO: If not exists, return empty dictionary
+        if os.path.exists(self.storage_file):
+            with open(self.storage_file, 'r') as f:
+                return json.load(f)
+        return {}
+    
+    def _save_users(self):
+        """
+        Save users dictionary to storage file
+        """
+        # TODO: Write self.users dictionary to JSON file
+        with open(self.storage_file, 'w') as f:
+            json.dump(self.users, f, indent=2)
+    
+    def hash_password(self, password):
+        """
+        Hash a password with automatic salt generation
+        
+        Args:
+            password: Plain text password string
+            
+        Returns:
+            Hashed password as string
+        """
+        # TODO: Convert password to bytes
+        # TODO: Generate salt using bcrypt.gensalt()
+        # TODO: Hash password with salt using bcrypt.hashpw()
+        # TODO: Return hashed password decoded to string
+        
+        password_bytes = password.encode('utf-8')
+        salt = bcrypt.gensalt()
+        hashed = bcrypt.hashpw(password_bytes, salt)
+        return hashed.decode('utf-8')
+    
+    def register_user(self, username, password):
+        """
+        Register a new user with hashed password
+        
+        Args:
+            username: Username string
+            password: Plain text password
+            
+        Returns:
+            True if successful, False if user exists
+        """
+        # TODO: Check if username already exists
+        # TODO: If exists, return False
+        # TODO: Hash the password
+        # TODO: Store username and hashed password in self.users
+        # TODO: Save to file
+        # TODO: Return True
+        
+        if username in self.users:
+            print(f"[ERROR] User '{username}' already exists")
+            return False
+        
+        hashed_password = self.hash_password(password)
+        self.users[username] = hashed_password
+        self._save_users()
+        print(f"[SUCCESS] User '{username}' registered successfully")
+        return True
+    
+    def verify_password(self, username, password):
+        """
+        Verify a user's password
+        
+        Args:
+            username: Username to verify
+            password: Plain text password to check
+            
+        Returns:
+            True if password matches, False otherwise
+        """
+        # TODO: Check if username exists
+        # TODO: If not exists, return False
+        # TODO: Get stored hashed password
+        # TODO: Convert password and hash to bytes
+        # TODO: Use bcrypt.checkpw() to verify
+        # TODO: Return result
+        
+        if username not in self.users:
+            print(f"[ERROR] User '{username}' not found")
+            return False
+        
+        stored_hash = self.users[username].encode('utf-8')
+        password_bytes = password.encode('utf-8')
+        
+        result = bcrypt.checkpw(password_bytes, stored_hash)
+        
+        if result:
+            print(f"[SUCCESS] Password verified for '{username}'")
+        else:
+            print(f"[FAILED] Invalid password for '{username}'")
+        
+        return result
+    
+    def list_users(self):
+        """
+        List all registered usernames (not passwords!)
+        """
+        # TODO: Return list of usernames from self.users
+        return list(self.users.keys())
+
+
+# Test the secure password manager
+if __name__ == "__main__":
+    print("=== SECURE PASSWORD MANAGER ===\n")
+    
+    # Create manager instance
+    manager = SecurePasswordManager()
+    
+    # Register some users
+    print("--- Registering Users ---")
+    manager.register_user("alice", "SecurePass123!")
+    manager.register_user("bob", "MyP@ssw0rd")
+    manager.register_user("alice", "duplicate")  # Should fail
+    
+    print("\n--- Verifying Passwords ---")
+    manager.verify_password("alice", "SecurePass123!")  # Should succeed
+    manager.verify_password("alice", "WrongPassword")   # Should fail
+    manager.verify_password("bob", "MyP@ssw0rd")        # Should succeed
+    manager.verify_password("charlie", "anything")      # User doesn't exist
+    
+    print("\n--- Registered Users ---")
+    print(f"Users: {manager.list_users()}")
+Step 2: Run the Secure Implementation
+python3 secure_password_manager.py
+Step 3: Examine the Secure Storage
+# View the hashed passwords
+cat secure_passwords.json
+What you should see: Hashed passwords that look like random strings, not the original passwords.
+
+Task 3: Create an Interactive Password System
+Step 1: Build a Command-Line Interface
+Create an interactive program:
+
+nano password_cli.py
+Add this code:
+
+# password_cli.py
+from secure_password_manager import SecurePasswordManager
+import getpass
+
+def main():
+    """
+    Interactive command-line interface for password management
+    """
+    manager = SecurePasswordManager()
+    
+    print("=" * 50)
+    print("SECURE PASSWORD MANAGEMENT SYSTEM")
+    print("=" * 50)
+    
+    while True:
+        print("\nOptions:")
+        print("1. Register new user")
+        print("2. Login (verify password)")
+        print("3. List users")
+        print("4. Exit")
+        
+        choice = input("\nEnter choice (1-4): ").strip()
+        
+        if choice == "1":
+            # TODO: Get username and password from user
+            # TODO: Call manager.register_user()
+            username = input("Enter username: ").strip()
+            password = getpass.getpass("Enter password: ")
+            manager.register_user(username, password)
+            
+        elif choice == "2":
+            # TODO: Get username and password from user
+            # TODO: Call manager.verify_password()
+            username = input("Enter username: ").strip()
+            password = getpass.getpass("Enter password: ")
+            if manager.verify_password(username, password):
+                print(f"\nWelcome, {username}!")
+            else:
+                print("\nAccess denied!")
+            
+        elif choice == "3":
+            # TODO: Display list of users
+            users = manager.list_users()
+            print(f"\nRegistered users: {', '.join(users) if users else 'None'}")
+            
+        elif choice == "4":
+            print("\nGoodbye!")
+            break
+            
+        else:
+            print("\n[ERROR] Invalid choice. Please try again.")
+
+if __name__ == "__main__":
+    main()
+Step 2: Test the Interactive System
+python3 password_cli.py
+Test these scenarios:
+
+Register a new user with your name
+Try to login with correct password
+Try to login with wrong password
+List all users
+Exit the program
+Verification
+Step 1: Verify Hashing Works Differently Each Time
+Create a test script:
+
+nano test_salt.py
+# test_salt.py
+import bcrypt
+
+password = "SamePassword123"
+
+print("Hashing the same password 3 times:\n")
+
+for i in range(3):
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    print(f"Hash {i+1}: {hashed.decode('utf-8')}")
+
+print("\nNotice: Each hash is different due to unique salt!")
+print("This prevents rainbow table attacks.")
+Run it:
+
+python3 test_salt.py
+Expected result: Three different hashes for the same password.
+
+Step 2: Verify Security
+# Compare the two storage files
+echo "=== INSECURE STORAGE ==="
+cat insecure_passwords.txt
+
+echo -e "\n=== SECURE STORAGE ==="
+cat secure_passwords.json
+Checklist:
+
+ Insecure file shows plain text passwords
+ Secure file shows only hashed values
+ Same password hashed multiple times produces different hashes
+ Password verification works correctly
+ Wrong passwords are rejected
+Conclusion
+What You Accomplished
+You have successfully:
+
+Created a secure password hashing system using bcrypt
+Implemented automatic salt generation for each password
+Built a password verification system that never stores plain text
+Developed an interactive command-line password manager
+Understood the difference between secure and insecure password storage
+Why This Matters for Cyber Professionals
+Password security is fundamental to cybersecurity:
+
+Data Breaches: When databases are compromised, hashed passwords protect users
+Compliance: Regulations like GDPR require secure password storage
+Professional Practice: All production systems must use proper password hashing
+Career Skills: Understanding bcrypt, salting, and hashing is essential for security roles
+Key Takeaways
+Never store plain text passwords: Always use cryptographic hashing
+Always use salt: Prevents rainbow table and dictionary attacks
+Use proven libraries: bcrypt is industry-standard and battle-tested
+One-way function: Hashes cannot be reversed to get original password
+Clean Up (Optional)
+# Remove test files if desired
+cd ~/password-lab
+rm insecure_passwords.txt
+# Keep secure_passwords.json to see the difference
+Next Steps
+To continue learning:
+
+Research password strength requirements
+Learn about multi-factor authentication (MFA)
+Explore password policies and rotation
+Study other hashing algorithms (Argon2, scrypt)
+Congratulations! You've built a secure password system that follows industry best practices.
