@@ -1,0 +1,472 @@
+Plugin-driven Log Analysis Engine
+Prerequisites
+Basic Python programming knowledge (functions, classes, loops)
+Familiarity with Linux command line
+Understanding of file operations in Python
+Basic knowledge of log file formats
+Learning Objectives
+By completing this lab, you will:
+
+Understand plugin architecture design patterns
+Implement dynamic module loading in Python
+Create extensible security analysis tools
+Process and analyze log files programmatically
+Build a modular system for log pattern detection
+Environment Setup
+Step 1: Verify Python Installation
+python3 --version
+You should see Python 3.8 or higher.
+
+Step 2: Create Lab Directory Structure
+mkdir -p ~/log-analyzer/{plugins,logs,output}
+cd ~/log-analyzer
+Step 3: Install Required Python Packages
+pip3 install --user colorama
+Task 1: Build the Plugin Architecture
+Step 1: Create the Plugin Base Class
+Create the foundation for all analyzer plugins:
+
+nano plugin_base.py
+Add the following code:
+
+"""
+Base class for all log analyzer plugins.
+All plugins must inherit from this class.
+"""
+
+class PluginBase:
+    """
+    Base class that defines the interface for all analyzer plugins.
+    """
+    
+    def __init__(self):
+        """Initialize the plugin with a name and description."""
+        self.name = "Base Plugin"
+        self.description = "Base plugin class"
+    
+    def analyze(self, log_line: str) -> dict:
+        """
+        Analyze a single log line.
+        
+        Args:
+            log_line: A single line from a log file
+            
+        Returns:
+            Dictionary with analysis results or None if no match
+            Format: {'severity': str, 'message': str, 'details': dict}
+        """
+        raise NotImplementedError("Plugins must implement analyze() method")
+    
+    def get_info(self) -> dict:
+        """
+        Return plugin information.
+        
+        Returns:
+            Dictionary with plugin name and description
+        """
+        return {
+            'name': self.name,
+            'description': self.description
+        }
+Save and exit (Ctrl+O, Enter, Ctrl+X).
+
+Step 2: Create Sample Analyzer Plugins
+Plugin 1: Failed Login Detector
+
+nano plugins/failed_login_analyzer.py
+Add this code:
+
+"""
+Plugin to detect failed login attempts in logs.
+"""
+import sys
+sys.path.append('..')
+from plugin_base import PluginBase
+import re
+
+class FailedLoginAnalyzer(PluginBase):
+    """Detects failed SSH and sudo login attempts."""
+    
+    def __init__(self):
+        super().__init__()
+        self.name = "Failed Login Analyzer"
+        self.description = "Detects failed authentication attempts"
+        # TODO: Add more patterns for different log formats
+        self.patterns = [
+            r'Failed password for .* from ([\d\.]+)',
+            r'authentication failure.*rhost=([\d\.]+)',
+            r'sudo.*authentication failure'
+        ]
+    
+    def analyze(self, log_line: str) -> dict:
+        """
+        Check if log line contains failed login attempts.
+        
+        Args:
+            log_line: Single log line to analyze
+            
+        Returns:
+            Analysis result dictionary or None
+        """
+        # TODO: Implement pattern matching logic
+        for pattern in self.patterns:
+            match = re.search(pattern, log_line, re.IGNORECASE)
+            if match:
+                return {
+                    'severity': 'HIGH',
+                    'message': 'Failed login attempt detected',
+                    'details': {
+                        'pattern_matched': pattern,
+                        'log_line': log_line.strip()
+                    }
+                }
+        return None
+
+# Required: Plugin entry point
+def get_plugin():
+    """Return an instance of the plugin."""
+    return FailedLoginAnalyzer()
+Save and exit.
+
+Plugin 2: Error Pattern Detector
+
+nano plugins/error_pattern_analyzer.py
+Add this code:
+
+"""
+Plugin to detect common error patterns in logs.
+"""
+import sys
+sys.path.append('..')
+from plugin_base import PluginBase
+
+class ErrorPatternAnalyzer(PluginBase):
+    """Detects common error keywords in logs."""
+    
+    def __init__(self):
+        super().__init__()
+        self.name = "Error Pattern Analyzer"
+        self.description = "Detects error keywords and patterns"
+        self.error_keywords = ['error', 'critical', 'fatal', 'exception']
+    
+    def analyze(self, log_line: str) -> dict:
+        """
+        Check if log line contains error keywords.
+        
+        Args:
+            log_line: Single log line to analyze
+            
+        Returns:
+            Analysis result dictionary or None
+        """
+        # TODO: Implement keyword detection
+        log_lower = log_line.lower()
+        for keyword in self.error_keywords:
+            if keyword in log_lower:
+                severity = 'CRITICAL' if keyword in ['critical', 'fatal'] else 'MEDIUM'
+                return {
+                    'severity': severity,
+                    'message': f'Error keyword detected: {keyword}',
+                    'details': {
+                        'keyword': keyword,
+                        'log_line': log_line.strip()
+                    }
+                }
+        return None
+
+def get_plugin():
+    """Return an instance of the plugin."""
+    return ErrorPatternAnalyzer()
+Save and exit.
+
+Step 3: Create the Plugin Loader
+nano plugin_loader.py
+Add this code:
+
+"""
+Dynamic plugin loader for the log analysis engine.
+"""
+import os
+import importlib.util
+from typing import List
+
+class PluginLoader:
+    """Loads and manages analyzer plugins dynamically."""
+    
+    def __init__(self, plugin_directory: str = 'plugins'):
+        """
+        Initialize the plugin loader.
+        
+        Args:
+            plugin_directory: Directory containing plugin files
+        """
+        self.plugin_directory = plugin_directory
+        self.plugins = []
+    
+    def load_plugins(self) -> int:
+        """
+        Load all plugins from the plugin directory.
+        
+        Returns:
+            Number of plugins loaded successfully
+        """
+        # TODO: Implement dynamic plugin loading
+        if not os.path.exists(self.plugin_directory):
+            print(f"Plugin directory '{self.plugin_directory}' not found")
+            return 0
+        
+        loaded_count = 0
+        for filename in os.listdir(self.plugin_directory):
+            if filename.endswith('_analyzer.py'):
+                plugin_path = os.path.join(self.plugin_directory, filename)
+                try:
+                    # Load the module dynamically
+                    spec = importlib.util.spec_from_file_location(
+                        filename[:-3], plugin_path
+                    )
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+                    
+                    # Get plugin instance
+                    plugin_instance = module.get_plugin()
+                    self.plugins.append(plugin_instance)
+                    loaded_count += 1
+                    print(f"[+] Loaded plugin: {plugin_instance.name}")
+                    
+                except Exception as e:
+                    print(f"[-] Failed to load {filename}: {str(e)}")
+        
+        return loaded_count
+    
+    def get_plugins(self) -> List:
+        """Return list of loaded plugins."""
+        return self.plugins
+Save and exit.
+
+Task 2: Build the Log Analysis Engine
+Step 1: Create the Main Analysis Engine
+nano log_analyzer.py
+Add this code:
+
+"""
+Main log analysis engine with plugin support.
+"""
+from plugin_loader import PluginLoader
+from datetime import datetime
+import json
+
+class LogAnalyzer:
+    """Main engine for analyzing logs using plugins."""
+    
+    def __init__(self):
+        """Initialize the log analyzer."""
+        self.loader = PluginLoader()
+        self.results = []
+    
+    def initialize(self):
+        """Load all available plugins."""
+        print("\n=== Initializing Log Analysis Engine ===")
+        count = self.loader.load_plugins()
+        print(f"\nTotal plugins loaded: {count}\n")
+        return count > 0
+    
+    def analyze_file(self, log_file: str):
+        """
+        Analyze a log file using all loaded plugins.
+        
+        Args:
+            log_file: Path to the log file to analyze
+        """
+        # TODO: Implement file processing logic
+        print(f"[*] Analyzing log file: {log_file}")
+        
+        try:
+            with open(log_file, 'r') as f:
+                line_number = 0
+                for line in f:
+                    line_number += 1
+                    # Run each plugin on the log line
+                    for plugin in self.loader.get_plugins():
+                        result = plugin.analyze(line)
+                        if result:
+                            result['line_number'] = line_number
+                            result['plugin'] = plugin.name
+                            result['timestamp'] = datetime.now().isoformat()
+                            self.results.append(result)
+            
+            print(f"[+] Analysis complete. Found {len(self.results)} issues.")
+            
+        except FileNotFoundError:
+            print(f"[-] Error: Log file '{log_file}' not found")
+        except Exception as e:
+            print(f"[-] Error analyzing file: {str(e)}")
+    
+    def generate_report(self, output_file: str = 'output/report.json'):
+        """
+        Generate analysis report.
+        
+        Args:
+            output_file: Path to save the report
+        """
+        # TODO: Implement report generation
+        report = {
+            'analysis_date': datetime.now().isoformat(),
+            'total_findings': len(self.results),
+            'findings': self.results
+        }
+        
+        with open(output_file, 'w') as f:
+            json.dump(report, f, indent=2)
+        
+        print(f"\n[+] Report saved to: {output_file}")
+        
+        # Print summary
+        print("\n=== Analysis Summary ===")
+        severity_counts = {}
+        for result in self.results:
+            sev = result['severity']
+            severity_counts[sev] = severity_counts.get(sev, 0) + 1
+        
+        for severity, count in severity_counts.items():
+            print(f"{severity}: {count} findings")
+
+def main():
+    """Main execution function."""
+    analyzer = LogAnalyzer()
+    
+    if not analyzer.initialize():
+        print("[-] No plugins loaded. Exiting.")
+        return
+    
+    # Analyze log file
+    analyzer.analyze_file('logs/sample.log')
+    
+    # Generate report
+    analyzer.generate_report()
+
+if __name__ == '__main__':
+    main()
+Save and exit.
+
+Step 2: Create Sample Log File
+nano logs/sample.log
+Add sample log entries:
+
+2024-01-15 10:23:45 INFO: System startup complete
+2024-01-15 10:24:12 WARNING: High memory usage detected
+2024-01-15 10:25:33 ERROR: Database connection failed
+2024-01-15 10:26:01 Failed password for admin from 192.168.1.100 port 22 ssh2
+2024-01-15 10:26:15 INFO: Service restarted successfully
+2024-01-15 10:27:42 CRITICAL: Disk space below 5%
+2024-01-15 10:28:19 Failed password for root from 10.0.0.50 port 22 ssh2
+2024-01-15 10:29:05 authentication failure; rhost=172.16.0.25
+2024-01-15 10:30:11 INFO: Backup completed
+2024-01-15 10:31:28 FATAL: Application crashed unexpectedly
+2024-01-15 10:32:45 sudo: authentication failure for user john
+2024-01-15 10:33:12 ERROR: File not found exception
+Save and exit.
+
+Verification
+Step 1: Run the Log Analyzer
+cd ~/log-analyzer
+python3 log_analyzer.py
+Expected Output:
+
+=== Initializing Log Analysis Engine ===
+[+] Loaded plugin: Error Pattern Analyzer
+[+] Loaded plugin: Failed Login Analyzer
+
+Total plugins loaded: 2
+
+[*] Analyzing log file: logs/sample.log
+[+] Analysis complete. Found X issues.
+
+[+] Report saved to: output/report.json
+
+=== Analysis Summary ===
+HIGH: X findings
+MEDIUM: X findings
+CRITICAL: X findings
+Step 2: Verify the Report
+cat output/report.json
+You should see a JSON report with detected issues.
+
+Step 3: View Specific Findings
+python3 -m json.tool output/report.json | grep -A 5 "severity"
+This displays findings organized by severity level.
+
+Step 4: Test Plugin Extensibility
+Create a simple custom plugin:
+
+nano plugins/custom_analyzer.py
+Add minimal code:
+
+import sys
+sys.path.append('..')
+from plugin_base import PluginBase
+
+class CustomAnalyzer(PluginBase):
+    def __init__(self):
+        super().__init__()
+        self.name = "Custom Analyzer"
+        self.description = "Detects WARNING keywords"
+    
+    def analyze(self, log_line: str) -> dict:
+        if 'WARNING' in log_line:
+            return {
+                'severity': 'LOW',
+                'message': 'Warning detected',
+                'details': {'log_line': log_line.strip()}
+            }
+        return None
+
+def get_plugin():
+    return CustomAnalyzer()
+Save and run the analyzer again:
+
+python3 log_analyzer.py
+Verify the new plugin is loaded and detects warnings.
+
+Troubleshooting Tips
+Issue: "No module named 'plugin_base'"
+
+Solution: Ensure you're running from the ~/log-analyzer directory
+Check that plugin_base.py exists in the current directory
+Issue: "Plugin directory not found"
+
+Solution: Verify the plugins directory exists: ls -la plugins/
+Create if missing: mkdir plugins
+Issue: Plugins not loading
+
+Solution: Ensure plugin files end with _analyzer.py
+Check that each plugin has a get_plugin() function
+Verify file permissions: chmod +r plugins/*.py
+Issue: No findings in report
+
+Solution: Check log file exists: cat logs/sample.log
+Verify log patterns match plugin detection rules
+Add debug print statements in plugin analyze() methods
+Conclusion
+You have successfully built a plugin-driven log analysis engine with the following capabilities:
+
+What You Accomplished:
+
+Designed an extensible plugin architecture using base classes
+Implemented dynamic module loading to discover and load plugins at runtime
+Created multiple analyzer plugins for different security patterns
+Processed log files and generated structured reports
+Built a modular system that can be extended without modifying core code
+Real-World Applications:
+
+Security Information and Event Management (SIEM) systems
+Automated threat detection platforms
+Log aggregation and analysis tools
+Incident response automation
+Compliance monitoring systems
+Key Takeaways:
+
+Plugin architectures enable extensibility without code changes
+Dynamic loading allows adding new analyzers by simply dropping files in a directory
+Separation of concerns makes code maintainable and testable
+This pattern is used in professional security tools like Splunk, ELK Stack, and OSSEC
+You can extend this system by adding more sophisticated plugins for detecting SQL injection attempts, port scans, privilege escalation, or custom business logic patterns.
