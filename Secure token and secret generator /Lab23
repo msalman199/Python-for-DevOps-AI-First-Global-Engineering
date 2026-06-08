@@ -1,0 +1,528 @@
+Secure Token and Secret Generator
+Prerequisites
+Basic Linux command line knowledge
+Understanding of file permissions
+Familiarity with text editors (nano or vi)
+Python 3.x basics (variables, functions, print statements)
+Learning Objectives
+By completing this lab, you will:
+
+Understand cryptographic randomness and its importance
+Generate secure tokens using Python's secrets module
+Create API keys and passwords programmatically
+Implement best practices for secret generation
+Store and manage generated secrets securely
+Environment Setup
+Step 1: Start Your Lab Environment
+Click the "Start Lab" button to provision your Linux machine. Once ready, connect via SSH.
+
+Step 2: Update System and Install Required Tools
+sudo apt update
+sudo apt install -y python3 python3-pip
+Step 3: Create Lab Directory
+mkdir -p ~/secure-token-lab
+cd ~/secure-token-lab
+Step 4: Verify Python Installation
+python3 --version
+Expected output: Python 3.8 or higher
+
+Task 1: Understanding Cryptographic Randomness
+Background
+Cryptographically secure random numbers are essential for:
+
+API keys and authentication tokens
+Password generation
+Session identifiers
+Encryption keys
+Important: Never use random module for security purposes. Always use secrets module.
+
+Step 1: Create Comparison Script
+Create a file to demonstrate the difference between random and secure random:
+
+nano random_comparison.py
+Add the following code:
+
+import random
+import secrets
+
+# Insecure random (predictable - DO NOT USE for security)
+print("=== Insecure Random (for demonstration only) ===")
+random.seed(42)  # Predictable with same seed
+for i in range(3):
+    print(f"Random number {i+1}: {random.randint(1000, 9999)}")
+
+print("\n=== Cryptographically Secure Random ===")
+# Secure random (unpredictable - USE for security)
+for i in range(3):
+    print(f"Secure number {i+1}: {secrets.randbelow(9000) + 1000}")
+Step 2: Run the Comparison
+python3 random_comparison.py
+Run it multiple times and observe that insecure random produces the same sequence, while secure random does not.
+
+Task 2: Generate Secure Tokens
+Step 1: Create Token Generator Script
+nano token_generator.py
+Add the following starter code:
+
+#!/usr/bin/env python3
+"""
+Secure Token Generator
+Generates cryptographically secure tokens for various purposes
+"""
+
+import secrets
+import string
+import hashlib
+from datetime import datetime
+
+def generate_hex_token(length=32):
+    """
+    Generate a hexadecimal token.
+    
+    Args:
+        length: Number of bytes (token will be 2x this in hex chars)
+    
+    Returns:
+        Hexadecimal string token
+    """
+    # TODO: Use secrets.token_hex() to generate token
+    token = secrets.token_hex(length)
+    return token
+
+
+def generate_url_safe_token(length=32):
+    """
+    Generate a URL-safe token (base64 encoded).
+    
+    Args:
+        length: Number of bytes
+    
+    Returns:
+        URL-safe string token
+    """
+    # TODO: Use secrets.token_urlsafe() to generate token
+    token = secrets.token_urlsafe(length)
+    return token
+
+
+def generate_alphanumeric_token(length=16):
+    """
+    Generate an alphanumeric token.
+    
+    Args:
+        length: Number of characters
+    
+    Returns:
+        Alphanumeric string token
+    """
+    # TODO: Create alphabet with letters and digits
+    alphabet = string.ascii_letters + string.digits
+    
+    # TODO: Use secrets.choice() in a loop or join with list comprehension
+    token = ''.join(secrets.choice(alphabet) for i in range(length))
+    return token
+
+
+def main():
+    print("=== Secure Token Generator ===\n")
+    
+    # Generate different types of tokens
+    print("1. Hexadecimal Token (64 chars):")
+    hex_token = generate_hex_token(32)
+    print(f"   {hex_token}\n")
+    
+    print("2. URL-Safe Token:")
+    url_token = generate_url_safe_token(32)
+    print(f"   {url_token}\n")
+    
+    print("3. Alphanumeric Token (16 chars):")
+    alpha_token = generate_alphanumeric_token(16)
+    print(f"   {alpha_token}\n")
+
+
+if __name__ == "__main__":
+    main()
+Step 2: Make Script Executable and Run
+chmod +x token_generator.py
+python3 token_generator.py
+Step 3: Verify Token Uniqueness
+Run the script multiple times to confirm each execution produces different tokens:
+
+for i in {1..3}; do echo "Run $i:"; python3 token_generator.py | head -n 5; echo ""; done
+Task 3: Generate API Keys and Secrets
+Step 1: Create API Key Generator
+nano api_key_generator.py
+Add the following code:
+
+#!/usr/bin/env python3
+"""
+API Key and Secret Generator
+Creates API keys with prefixes and associated secrets
+"""
+
+import secrets
+import string
+import json
+from datetime import datetime
+
+def generate_api_key(prefix="sk", length=32):
+    """
+    Generate an API key with a prefix.
+    
+    Args:
+        prefix: String prefix for the key (e.g., 'sk' for secret key)
+        length: Length of the random portion
+    
+    Returns:
+        API key string with prefix
+    """
+    # TODO: Generate random part using alphanumeric characters
+    alphabet = string.ascii_letters + string.digits
+    random_part = ''.join(secrets.choice(alphabet) for i in range(length))
+    
+    # TODO: Combine prefix with random part using underscore
+    api_key = f"{prefix}_{random_part}"
+    return api_key
+
+
+def generate_secret_key(length=64):
+    """
+    Generate a secret key for signing/encryption.
+    
+    Args:
+        length: Number of bytes
+    
+    Returns:
+        Hexadecimal secret key
+    """
+    # TODO: Generate hex token for secret key
+    return secrets.token_hex(length)
+
+
+def generate_password(length=16, use_special=True):
+    """
+    Generate a secure random password.
+    
+    Args:
+        length: Password length
+        use_special: Include special characters
+    
+    Returns:
+        Secure password string
+    """
+    # TODO: Build alphabet with letters and digits
+    alphabet = string.ascii_letters + string.digits
+    
+    # TODO: Add special characters if requested
+    if use_special:
+        alphabet += string.punctuation
+    
+    # TODO: Generate password ensuring at least one of each type
+    # Simple approach: generate random password
+    password = ''.join(secrets.choice(alphabet) for i in range(length))
+    return password
+
+
+def save_credentials(filename, credentials):
+    """
+    Save credentials to a JSON file securely.
+    
+    Args:
+        filename: Output file path
+        credentials: Dictionary of credentials
+    """
+    # TODO: Write credentials to JSON file
+    with open(filename, 'w') as f:
+        json.dump(credentials, f, indent=2)
+    
+    # TODO: Set restrictive file permissions (owner read/write only)
+    import os
+    os.chmod(filename, 0o600)
+
+
+def main():
+    print("=== API Key and Secret Generator ===\n")
+    
+    # Generate API credentials
+    credentials = {
+        "generated_at": datetime.now().isoformat(),
+        "api_key": generate_api_key("sk", 32),
+        "api_secret": generate_secret_key(64),
+        "webhook_secret": generate_secret_key(32),
+        "admin_password": generate_password(20, use_special=True),
+        "database_password": generate_password(24, use_special=True)
+    }
+    
+    # Display generated credentials
+    print("Generated Credentials:")
+    print("-" * 60)
+    for key, value in credentials.items():
+        if key != "generated_at":
+            print(f"{key:20s}: {value}")
+    print("-" * 60)
+    
+    # Save to file
+    output_file = "credentials.json"
+    save_credentials(output_file, credentials)
+    print(f"\nCredentials saved to: {output_file}")
+    print("File permissions set to 600 (owner read/write only)")
+
+
+if __name__ == "__main__":
+    main()
+Step 2: Run the API Key Generator
+python3 api_key_generator.py
+Step 3: Verify File Permissions
+ls -l credentials.json
+Expected output: -rw------- 1 user user (only owner can read/write)
+
+Step 4: View Generated Credentials
+cat credentials.json
+Task 4: Create a Practical Token Management Tool
+Step 1: Build Complete Token Manager
+nano token_manager.py
+Add this comprehensive tool:
+
+#!/usr/bin/env python3
+"""
+Token Manager - Complete secure token generation tool
+"""
+
+import secrets
+import string
+import json
+import sys
+import os
+from datetime import datetime
+
+class TokenManager:
+    """Manages generation and storage of secure tokens"""
+    
+    def __init__(self):
+        self.tokens = {}
+    
+    def generate_session_token(self):
+        """Generate a session token (URL-safe, 32 bytes)"""
+        return secrets.token_urlsafe(32)
+    
+    def generate_csrf_token(self):
+        """Generate a CSRF token (hex, 32 bytes)"""
+        return secrets.token_hex(32)
+    
+    def generate_reset_token(self):
+        """Generate a password reset token (URL-safe, 48 bytes)"""
+        return secrets.token_urlsafe(48)
+    
+    def generate_api_key_pair(self, prefix="app"):
+        """Generate API key and secret pair"""
+        key_id = ''.join(secrets.choice(string.ascii_uppercase + string.digits) 
+                        for _ in range(16))
+        api_key = f"{prefix}_{key_id}"
+        api_secret = secrets.token_hex(32)
+        return {"api_key": api_key, "api_secret": api_secret}
+    
+    def generate_otp_secret(self):
+        """Generate a secret for OTP/2FA (base32 encoded)"""
+        # Generate 20 random bytes and encode as base32
+        random_bytes = secrets.token_bytes(20)
+        import base64
+        return base64.b32encode(random_bytes).decode('utf-8')
+    
+    def create_token_set(self, name):
+        """Create a complete set of tokens for an application"""
+        token_set = {
+            "name": name,
+            "created_at": datetime.now().isoformat(),
+            "session_token": self.generate_session_token(),
+            "csrf_token": self.generate_csrf_token(),
+            "reset_token": self.generate_reset_token(),
+            "api_credentials": self.generate_api_key_pair(name.lower()),
+            "otp_secret": self.generate_otp_secret()
+        }
+        self.tokens[name] = token_set
+        return token_set
+    
+    def save_tokens(self, filename="tokens.json"):
+        """Save all tokens to encrypted file"""
+        with open(filename, 'w') as f:
+            json.dump(self.tokens, f, indent=2)
+        os.chmod(filename, 0o600)
+        return filename
+
+
+def print_menu():
+    """Display menu options"""
+    print("\n=== Secure Token Manager ===")
+    print("1. Generate Session Token")
+    print("2. Generate CSRF Token")
+    print("3. Generate Password Reset Token")
+    print("4. Generate API Key Pair")
+    print("5. Generate OTP Secret")
+    print("6. Generate Complete Token Set")
+    print("7. Exit")
+    print("=" * 30)
+
+
+def main():
+    manager = TokenManager()
+    
+    while True:
+        print_menu()
+        choice = input("\nSelect option (1-7): ").strip()
+        
+        if choice == "1":
+            token = manager.generate_session_token()
+            print(f"\nSession Token:\n{token}")
+        
+        elif choice == "2":
+            token = manager.generate_csrf_token()
+            print(f"\nCSRF Token:\n{token}")
+        
+        elif choice == "3":
+            token = manager.generate_reset_token()
+            print(f"\nPassword Reset Token:\n{token}")
+        
+        elif choice == "4":
+            pair = manager.generate_api_key_pair()
+            print(f"\nAPI Key: {pair['api_key']}")
+            print(f"API Secret: {pair['api_secret']}")
+        
+        elif choice == "5":
+            secret = manager.generate_otp_secret()
+            print(f"\nOTP Secret (Base32):\n{secret}")
+        
+        elif choice == "6":
+            name = input("Enter application name: ").strip()
+            if name:
+                token_set = manager.create_token_set(name)
+                print(f"\nComplete token set generated for: {name}")
+                print(json.dumps(token_set, indent=2))
+                filename = manager.save_tokens()
+                print(f"\nTokens saved to: {filename}")
+        
+        elif choice == "7":
+            print("\nExiting Token Manager. Stay secure!")
+            break
+        
+        else:
+            print("\nInvalid option. Please try again.")
+
+
+if __name__ == "__main__":
+    main()
+Step 2: Run the Token Manager
+chmod +x token_manager.py
+python3 token_manager.py
+Step 3: Test Different Token Types
+Try each menu option:
+
+Generate a session token
+Generate a CSRF token
+Generate an API key pair
+Create a complete token set (name it "myapp")
+Exit the program
+Step 4: Verify Saved Tokens
+cat tokens.json
+ls -l tokens.json
+Verification
+Step 1: Verify Token Uniqueness
+Create a verification script:
+
+nano verify_tokens.py
+#!/usr/bin/env python3
+import secrets
+
+# Generate 1000 tokens and check for duplicates
+tokens = set()
+count = 1000
+
+for i in range(count):
+    token = secrets.token_hex(32)
+    tokens.add(token)
+
+print(f"Generated: {count} tokens")
+print(f"Unique: {len(tokens)} tokens")
+print(f"Duplicates: {count - len(tokens)}")
+
+if len(tokens) == count:
+    print("\nSUCCESS: All tokens are unique!")
+else:
+    print("\nWARNING: Duplicates found (extremely unlikely)")
+Run verification:
+
+python3 verify_tokens.py
+Step 2: Check File Security
+ls -la ~/secure-token-lab/*.json
+All JSON files should show -rw------- permissions.
+
+Step 3: Test Token Entropy
+python3 -c "import secrets; print(f'Token entropy: {len(secrets.token_hex(32)) * 4} bits')"
+Expected: 256 bits or higher for secure tokens.
+
+Step 4: Verify All Scripts Work
+python3 token_generator.py > /dev/null && echo "token_generator.py: OK"
+python3 api_key_generator.py > /dev/null && echo "api_key_generator.py: OK"
+echo "6" | python3 token_manager.py > /dev/null && echo "token_manager.py: OK"
+Troubleshooting
+Issue: Permission Denied on JSON Files
+Solution:
+
+chmod 600 *.json
+Issue: Module Not Found Error
+Solution:
+
+python3 -m pip install --upgrade pip
+All required modules (secrets, string, json) are built-in to Python 3.6+.
+
+Issue: Tokens Appear Too Short
+Explanation: Token length in bytes vs characters:
+
+token_hex(32) produces 64 characters (2 hex chars per byte)
+token_urlsafe(32) produces ~43 characters (base64 encoding)
+Both provide 256 bits of entropy (secure).
+
+Issue: Script Not Executable
+Solution:
+
+chmod +x *.py
+Conclusion
+What You Accomplished
+You have successfully:
+
+Generated cryptographically secure tokens using Python's secrets module
+Created various token types: hex, URL-safe, and alphanumeric
+Built API key and secret generators with proper formatting
+Implemented secure file storage with appropriate permissions
+Developed a complete token management tool for real-world applications
+Key Takeaways
+Always use secrets module for security-related randomness
+Never use random module for passwords, tokens, or keys
+Set restrictive file permissions (600) on credential files
+Use appropriate token lengths (minimum 32 bytes for high security)
+Include prefixes in API keys for easy identification
+Store secrets securely and never commit them to version control
+Real-World Applications
+These skills are essential for:
+
+Web application session management
+API authentication systems
+Password reset functionality
+OAuth and JWT implementations
+Two-factor authentication systems
+Webhook signature verification
+Next Steps
+To further develop your skills:
+
+Implement token expiration and rotation
+Add encryption for stored credentials
+Create token validation functions
+Build a complete authentication system
+Explore hardware security modules (HSM) for key storage
+Security Best Practices Reminder
+Rotate tokens regularly
+Use environment variables for secrets in production
+Never log or display secrets in production
+Implement rate limiting for token generation endpoints
+Use HTTPS for all token transmission
+Store hashed versions when possible
+Lab Complete! You now have practical experience generating secure tokens and secrets for cybersecurity applications.
