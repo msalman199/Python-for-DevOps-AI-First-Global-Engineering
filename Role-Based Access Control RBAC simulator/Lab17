@@ -1,0 +1,441 @@
+Role-Based Access Control (RBAC) Simulator
+Prerequisites
+Basic understanding of Linux command line
+Familiarity with Python programming basics
+Understanding of file permissions concepts
+Access to a Linux machine with Python 3.6+ installed
+Learning Objectives
+By completing this lab, you will:
+
+Understand the core components of Role-Based Access Control (RBAC)
+Learn how roles, permissions, and users interact in access control systems
+Implement a basic RBAC simulator to make access decisions
+Apply RBAC principles used in real-world security systems
+Environment Setup
+Step 1: Verify Python Installation
+python3 --version
+You should see Python 3.6 or higher.
+
+Step 2: Create Lab Directory
+mkdir ~/rbac-lab
+cd ~/rbac-lab
+Step 3: Create Project Structure
+touch rbac_simulator.py
+touch test_rbac.py
+Task 1: Build the RBAC Simulator
+Understanding RBAC Components
+RBAC consists of four main elements:
+
+Users: Individuals who need access to resources
+Roles: Job functions (e.g., Admin, Editor, Viewer)
+Permissions: Actions that can be performed (e.g., read, write, delete)
+Resources: Objects being protected (e.g., files, databases)
+Step 1: Create the Permission Class
+Open rbac_simulator.py and add:
+
+class Permission:
+    """
+    Represents a single permission in the RBAC system.
+    A permission defines an action that can be performed on a resource.
+    """
+    
+    def __init__(self, action, resource):
+        """
+        Initialize a permission.
+        
+        Args:
+            action (str): The action (e.g., 'read', 'write', 'delete')
+            resource (str): The resource (e.g., 'document', 'database')
+        """
+        self.action = action
+        self.resource = resource
+    
+    def __str__(self):
+        return f"{self.action}:{self.resource}"
+    
+    def __eq__(self, other):
+        """Check if two permissions are equal."""
+        # TODO: Compare action and resource of both permissions
+        # Return True if both match, False otherwise
+        pass
+    
+    def __hash__(self):
+        """Make Permission hashable for use in sets."""
+        return hash((self.action, self.resource))
+Step 2: Create the Role Class
+Add to rbac_simulator.py:
+
+class Role:
+    """
+    Represents a role in the RBAC system.
+    A role is a collection of permissions.
+    """
+    
+    def __init__(self, name):
+        """
+        Initialize a role.
+        
+        Args:
+            name (str): The role name (e.g., 'admin', 'editor')
+        """
+        self.name = name
+        self.permissions = set()
+    
+    def add_permission(self, permission):
+        """
+        Add a permission to this role.
+        
+        Args:
+            permission (Permission): The permission to add
+        """
+        # TODO: Add the permission to the permissions set
+        pass
+    
+    def has_permission(self, permission):
+        """
+        Check if this role has a specific permission.
+        
+        Args:
+            permission (Permission): The permission to check
+            
+        Returns:
+            bool: True if role has permission, False otherwise
+        """
+        # TODO: Check if permission exists in permissions set
+        pass
+    
+    def __str__(self):
+        return f"Role: {self.name} ({len(self.permissions)} permissions)"
+Step 3: Create the User Class
+Add to rbac_simulator.py:
+
+class User:
+    """
+    Represents a user in the RBAC system.
+    A user can have multiple roles.
+    """
+    
+    def __init__(self, username):
+        """
+        Initialize a user.
+        
+        Args:
+            username (str): The username
+        """
+        self.username = username
+        self.roles = set()
+    
+    def assign_role(self, role):
+        """
+        Assign a role to this user.
+        
+        Args:
+            role (Role): The role to assign
+        """
+        # TODO: Add the role to the roles set
+        pass
+    
+    def has_permission(self, permission):
+        """
+        Check if user has a permission through any of their roles.
+        
+        Args:
+            permission (Permission): The permission to check
+            
+        Returns:
+            bool: True if user has permission, False otherwise
+        """
+        # TODO: Loop through all roles
+        # TODO: Check if any role has the permission
+        # TODO: Return True if found, False if not
+        pass
+    
+    def __str__(self):
+        return f"User: {self.username} (Roles: {[r.name for r in self.roles]})"
+Step 4: Create the RBAC System Class
+Add to rbac_simulator.py:
+
+class RBACSystem:
+    """
+    Main RBAC system that manages users, roles, and access decisions.
+    """
+    
+    def __init__(self):
+        """Initialize the RBAC system."""
+        self.users = {}
+        self.roles = {}
+    
+    def create_role(self, role_name):
+        """
+        Create a new role.
+        
+        Args:
+            role_name (str): Name of the role
+            
+        Returns:
+            Role: The created role
+        """
+        # TODO: Create a new Role object
+        # TODO: Store it in self.roles dictionary with role_name as key
+        # TODO: Return the role
+        pass
+    
+    def create_user(self, username):
+        """
+        Create a new user.
+        
+        Args:
+            username (str): Username
+            
+        Returns:
+            User: The created user
+        """
+        # TODO: Create a new User object
+        # TODO: Store it in self.users dictionary with username as key
+        # TODO: Return the user
+        pass
+    
+    def check_access(self, username, action, resource):
+        """
+        Check if a user has permission to perform an action on a resource.
+        
+        Args:
+            username (str): The username
+            action (str): The action to perform
+            resource (str): The resource to access
+            
+        Returns:
+            bool: True if access granted, False otherwise
+        """
+        # TODO: Get the user from self.users
+        # TODO: If user doesn't exist, return False
+        # TODO: Create a Permission object with action and resource
+        # TODO: Check if user has the permission
+        # TODO: Return the result
+        pass
+    
+    def display_system_state(self):
+        """Display current state of the RBAC system."""
+        print("\n=== RBAC System State ===")
+        print(f"\nRoles ({len(self.roles)}):")
+        for role in self.roles.values():
+            print(f"  - {role}")
+            for perm in role.permissions:
+                print(f"    * {perm}")
+        
+        print(f"\nUsers ({len(self.users)}):")
+        for user in self.users.values():
+            print(f"  - {user}")
+Task 2: Test the RBAC Simulator
+Step 1: Create Test Scenarios
+Open test_rbac.py and add:
+
+#!/usr/bin/env python3
+"""
+Test script for RBAC simulator.
+This demonstrates a simple document management system.
+"""
+
+from rbac_simulator import RBACSystem, Permission
+
+def main():
+    # Initialize RBAC system
+    rbac = RBACSystem()
+    
+    print("=== Setting up RBAC System ===\n")
+    
+    # TODO: Create three roles: 'admin', 'editor', 'viewer'
+    # Use rbac.create_role() for each
+    
+    # TODO: Create permissions for admin role:
+    # - read:document
+    # - write:document
+    # - delete:document
+    # Add each permission to admin role using admin.add_permission()
+    
+    # TODO: Create permissions for editor role:
+    # - read:document
+    # - write:document
+    # Add to editor role
+    
+    # TODO: Create permissions for viewer role:
+    # - read:document
+    # Add to viewer role
+    
+    # TODO: Create three users: 'alice', 'bob', 'charlie'
+    # Use rbac.create_user() for each
+    
+    # TODO: Assign roles to users:
+    # - alice: admin role
+    # - bob: editor role
+    # - charlie: viewer role
+    # Use user.assign_role()
+    
+    # Display system state
+    rbac.display_system_state()
+    
+    # Test access control
+    print("\n=== Testing Access Control ===\n")
+    
+    test_cases = [
+        ('alice', 'delete', 'document', True),
+        ('bob', 'write', 'document', True),
+        ('bob', 'delete', 'document', False),
+        ('charlie', 'read', 'document', True),
+        ('charlie', 'write', 'document', False),
+    ]
+    
+    for username, action, resource, expected in test_cases:
+        result = rbac.check_access(username, action, resource)
+        status = "GRANTED" if result else "DENIED"
+        check = "✓" if result == expected else "✗"
+        print(f"{check} {username} -> {action}:{resource} = {status}")
+
+if __name__ == "__main__":
+    main()
+Step 2: Implement the Missing Methods
+Go back to rbac_simulator.py and complete all the TODO sections:
+
+Hints for Implementation:
+
+Permission.__eq__: Compare self.action with other.action and self.resource with other.resource
+Role.add_permission: Use self.permissions.add(permission)
+Role.has_permission: Use permission in self.permissions
+User.assign_role: Use self.roles.add(role)
+User.has_permission: Use a for loop to check each role
+RBACSystem.create_role: Create Role object and store in dictionary
+RBACSystem.check_access: Get user, create Permission, call user.has_permission()
+Step 3: Complete the Test Script
+In test_rbac.py, complete all TODO sections to:
+
+Create the three roles
+Add appropriate permissions to each role
+Create three users
+Assign roles to users
+Step 4: Run the Simulator
+python3 test_rbac.py
+Expected Output:
+
+=== Setting up RBAC System ===
+
+=== RBAC System State ===
+
+Roles (3):
+  - Role: admin (3 permissions)
+    * read:document
+    * write:document
+    * delete:document
+  - Role: editor (2 permissions)
+    * read:document
+    * write:document
+  - Role: viewer (1 permissions)
+    * read:document
+
+Users (3):
+  - User: alice (Roles: ['admin'])
+  - User: bob (Roles: ['editor'])
+  - User: charlie (Roles: ['viewer'])
+
+=== Testing Access Control ===
+
+✓ alice -> delete:document = GRANTED
+✓ bob -> write:document = GRANTED
+✓ bob -> delete:document = DENIED
+✓ charlie -> read:document = GRANTED
+✓ charlie -> write:document = DENIED
+Verification
+Test 1: Verify Basic Functionality
+python3 -c "
+from rbac_simulator import RBACSystem, Permission
+
+rbac = RBACSystem()
+admin = rbac.create_role('admin')
+admin.add_permission(Permission('read', 'file'))
+
+user = rbac.create_user('testuser')
+user.assign_role(admin)
+
+result = rbac.check_access('testuser', 'read', 'file')
+print('Access granted!' if result else 'Access denied!')
+"
+Should output: Access granted!
+
+Test 2: Create Custom Scenario
+Create a file custom_test.py:
+
+from rbac_simulator import RBACSystem, Permission
+
+# Create your own scenario
+rbac = RBACSystem()
+
+# Create a 'manager' role with read and write permissions for 'reports'
+manager = rbac.create_role('manager')
+manager.add_permission(Permission('read', 'reports'))
+manager.add_permission(Permission('write', 'reports'))
+
+# Create a user and assign the manager role
+user = rbac.create_user('john')
+user.assign_role(manager)
+
+# Test access
+print(f"Can read reports: {rbac.check_access('john', 'read', 'reports')}")
+print(f"Can delete reports: {rbac.check_access('john', 'delete', 'reports')}")
+Run it:
+
+python3 custom_test.py
+Test 3: Multiple Roles per User
+Add to custom_test.py:
+
+# Users can have multiple roles
+developer = rbac.create_role('developer')
+developer.add_permission(Permission('read', 'code'))
+developer.add_permission(Permission('write', 'code'))
+
+user.assign_role(developer)
+
+print(f"\nJohn's roles: {[r.name for r in user.roles]}")
+print(f"Can write code: {rbac.check_access('john', 'write', 'code')}")
+print(f"Can write reports: {rbac.check_access('john', 'write', 'reports')}")
+Troubleshooting
+Issue: "Permission not found" errors
+Solution: Ensure you're creating Permission objects with matching action and resource strings. RBAC is case-sensitive.
+
+Issue: Access always denied
+Solution: Check that:
+
+The role has the permission added
+The user has the role assigned
+The permission action and resource match exactly
+Issue: Import errors
+Solution: Ensure both files are in the same directory and you're running from that directory.
+
+Issue: Set operations not working
+Solution: Verify that __eq__ and __hash__ methods are properly implemented in the Permission class.
+
+Conclusion
+You have successfully built a Role-Based Access Control simulator that demonstrates:
+
+Core RBAC concepts: Users, roles, permissions, and resources
+Access control decisions: How systems determine if access should be granted
+Separation of duties: Different roles have different capabilities
+Scalability: Easy to add new roles, users, and permissions
+Real-World Applications
+RBAC is used in:
+
+Operating systems: Linux file permissions, Windows Active Directory
+Databases: PostgreSQL roles, MySQL user privileges
+Cloud platforms: AWS IAM, Azure RBAC, Google Cloud IAM
+Applications: Content management systems, enterprise software
+Key Takeaways
+RBAC simplifies permission management by grouping permissions into roles
+Users inherit permissions from their assigned roles
+One user can have multiple roles, combining their permissions
+This model scales better than assigning individual permissions to users
+Next Steps
+To extend this lab:
+
+Add role hierarchies (roles inheriting from other roles)
+Implement permission constraints (time-based, location-based)
+Add audit logging for access attempts
+Create a command-line interface for managing the system
+You now understand how access control systems make security decisions in real-world applications!
