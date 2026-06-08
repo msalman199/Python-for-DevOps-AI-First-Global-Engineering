@@ -1,0 +1,425 @@
+Local Mock API Health Monitor
+Prerequisites
+Basic Linux command line knowledge
+Understanding of what an API is (a way for programs to communicate)
+Familiarity with text editors (nano or vim)
+Basic understanding of HTTP status codes (200 = OK, 500 = Error)
+Learning Objectives
+By completing this lab, you will:
+
+Create a simple mock API service for testing
+Build a health monitoring script that checks API availability
+Implement periodic endpoint checking
+Log API status and response times
+Detect and report service failures
+Environment Setup
+You will use the bare-metal Linux machine provided through the "Start Lab" button. All tools will be installed during this lab.
+
+Install Required Tools
+# Update package list
+sudo apt update
+
+# Install Python3 and pip (if not already installed)
+sudo apt install -y python3 python3-pip
+
+# Install Flask for mock API
+pip3 install flask requests
+
+# Verify installations
+python3 --version
+pip3 --version
+Task 1: Create a Mock API Service
+Step 1: Create Project Directory
+# Create and navigate to project directory
+mkdir -p ~/api-health-monitor
+cd ~/api-health-monitor
+
+# Create directories for logs and API
+mkdir logs
+mkdir mock-api
+Step 2: Build the Mock API
+Create a simple API that simulates different health states.
+
+nano mock-api/api_server.py
+Add the following code:
+
+from flask import Flask, jsonify
+import random
+import time
+
+app = Flask(__name__)
+
+# Counter to simulate intermittent failures
+request_count = 0
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """
+    Basic health endpoint - always returns healthy status
+    """
+    return jsonify({
+        'status': 'healthy',
+        'service': 'mock-api',
+        'timestamp': time.time()
+    }), 200
+
+@app.route('/api/users', methods=['GET'])
+def get_users():
+    """
+    Simulates a user data endpoint with occasional failures
+    """
+    global request_count
+    request_count += 1
+    
+    # Simulate failure every 5th request
+    if request_count % 5 == 0:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    # Simulate slow response occasionally
+    if request_count % 3 == 0:
+        time.sleep(2)
+    
+    return jsonify({
+        'users': ['alice', 'bob', 'charlie'],
+        'count': 3
+    }), 200
+
+@app.route('/api/data', methods=['GET'])
+def get_data():
+    """
+    Another endpoint with random response times
+    """
+    # Random delay between 0.1 and 1 second
+    time.sleep(random.uniform(0.1, 1.0))
+    
+    return jsonify({
+        'data': 'sample data',
+        'processed': True
+    }), 200
+
+if __name__ == '__main__':
+    print("Starting Mock API on http://localhost:5000")
+    app.run(host='0.0.0.0', port=5000, debug=False)
+Step 3: Test the Mock API
+# Start the API in the background
+python3 mock-api/api_server.py &
+
+# Save the process ID
+echo $! > api_pid.txt
+
+# Wait for API to start
+sleep 2
+
+# Test the endpoints
+curl http://localhost:5000/health
+curl http://localhost:5000/api/users
+curl http://localhost:5000/api/data
+You should see JSON responses from each endpoint.
+
+Task 2: Build the Health Monitor
+Step 1: Create the Monitor Script
+nano health_monitor.py
+Add the following starter code and complete the TODO sections:
+
+#!/usr/bin/env python3
+"""
+API Health Monitor
+Periodically checks API endpoints and logs their status
+"""
+
+import requests
+import time
+import json
+from datetime import datetime
+import sys
+
+class APIHealthMonitor:
+    def __init__(self, base_url, check_interval=10):
+        """
+        Initialize the health monitor
+        
+        Args:
+            base_url: Base URL of the API to monitor
+            check_interval: Seconds between health checks
+        """
+        self.base_url = base_url
+        self.check_interval = check_interval
+        self.log_file = 'logs/health_monitor.log'
+        self.status_file = 'logs/current_status.json'
+        
+    def log_message(self, message, level='INFO'):
+        """
+        Write a log message to file and console
+        
+        Args:
+            message: The message to log
+            level: Log level (INFO, WARNING, ERROR)
+        """
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        log_entry = f"[{timestamp}] [{level}] {message}"
+        
+        # Print to console
+        print(log_entry)
+        
+        # Write to log file
+        with open(self.log_file, 'a') as f:
+            f.write(log_entry + '\n')
+    
+    def check_endpoint(self, endpoint, timeout=5):
+        """
+        Check a single endpoint and return its status
+        
+        Args:
+            endpoint: The endpoint path to check (e.g., '/health')
+            timeout: Request timeout in seconds
+            
+        Returns:
+            Dictionary with status information
+        """
+        url = f"{self.base_url}{endpoint}"
+        result = {
+            'endpoint': endpoint,
+            'url': url,
+            'timestamp': datetime.now().isoformat(),
+            'status': 'unknown',
+            'response_time': None,
+            'status_code': None,
+            'error': None
+        }
+        
+        try:
+            # TODO: Make HTTP GET request to the endpoint
+            # Measure the time it takes to get a response
+            start_time = time.time()
+            response = requests.get(url, timeout=timeout)
+            end_time = time.time()
+            
+            # TODO: Calculate response time in milliseconds
+            result['response_time'] = round((end_time - start_time) * 1000, 2)
+            result['status_code'] = response.status_code
+            
+            # TODO: Determine if endpoint is healthy
+            # Consider 200-299 status codes as healthy
+            if 200 <= response.status_code < 300:
+                result['status'] = 'healthy'
+            else:
+                result['status'] = 'unhealthy'
+                
+        except requests.exceptions.Timeout:
+            # TODO: Handle timeout errors
+            result['status'] = 'timeout'
+            result['error'] = 'Request timed out'
+            
+        except requests.exceptions.ConnectionError:
+            # TODO: Handle connection errors
+            result['status'] = 'unreachable'
+            result['error'] = 'Could not connect to service'
+            
+        except Exception as e:
+            # TODO: Handle any other errors
+            result['status'] = 'error'
+            result['error'] = str(e)
+        
+        return result
+    
+    def check_all_endpoints(self, endpoints):
+        """
+        Check all configured endpoints
+        
+        Args:
+            endpoints: List of endpoint paths to check
+            
+        Returns:
+            List of results for all endpoints
+        """
+        results = []
+        
+        for endpoint in endpoints:
+            # TODO: Check each endpoint
+            result = self.check_endpoint(endpoint)
+            results.append(result)
+            
+            # TODO: Log the result with appropriate level
+            if result['status'] == 'healthy':
+                self.log_message(
+                    f"{endpoint} is healthy (Response time: {result['response_time']}ms)",
+                    'INFO'
+                )
+            else:
+                self.log_message(
+                    f"{endpoint} is {result['status']} - {result.get('error', 'Status code: ' + str(result['status_code']))}",
+                    'ERROR'
+                )
+        
+        return results
+    
+    def save_status(self, results):
+        """
+        Save current status to JSON file
+        
+        Args:
+            results: List of endpoint check results
+        """
+        status_data = {
+            'last_check': datetime.now().isoformat(),
+            'endpoints': results,
+            'summary': {
+                'total': len(results),
+                'healthy': sum(1 for r in results if r['status'] == 'healthy'),
+                'unhealthy': sum(1 for r in results if r['status'] != 'healthy')
+            }
+        }
+        
+        # TODO: Write status to JSON file
+        with open(self.status_file, 'w') as f:
+            json.dump(status_data, f, indent=2)
+    
+    def run(self, endpoints, duration=None):
+        """
+        Run the health monitor continuously
+        
+        Args:
+            endpoints: List of endpoints to monitor
+            duration: How long to run (seconds), None for infinite
+        """
+        self.log_message(f"Starting health monitor for {self.base_url}")
+        self.log_message(f"Monitoring endpoints: {', '.join(endpoints)}")
+        self.log_message(f"Check interval: {self.check_interval} seconds")
+        
+        start_time = time.time()
+        check_count = 0
+        
+        try:
+            while True:
+                check_count += 1
+                self.log_message(f"--- Health Check #{check_count} ---")
+                
+                # TODO: Check all endpoints
+                results = self.check_all_endpoints(endpoints)
+                
+                # TODO: Save current status
+                self.save_status(results)
+                
+                # Check if we should stop
+                if duration and (time.time() - start_time) >= duration:
+                    self.log_message("Monitoring duration completed")
+                    break
+                
+                # TODO: Wait before next check
+                time.sleep(self.check_interval)
+                
+        except KeyboardInterrupt:
+            self.log_message("Monitoring stopped by user", 'INFO')
+        except Exception as e:
+            self.log_message(f"Monitor error: {str(e)}", 'ERROR')
+
+# Main execution
+if __name__ == '__main__':
+    # Configuration
+    BASE_URL = 'http://localhost:5000'
+    CHECK_INTERVAL = 10  # seconds
+    
+    # Endpoints to monitor
+    ENDPOINTS = [
+        '/health',
+        '/api/users',
+        '/api/data'
+    ]
+    
+    # Create and run monitor
+    monitor = APIHealthMonitor(BASE_URL, CHECK_INTERVAL)
+    
+    # Run for 2 minutes (120 seconds) for testing
+    # Change to None for continuous monitoring
+    monitor.run(ENDPOINTS, duration=120)
+Step 2: Make the Script Executable
+chmod +x health_monitor.py
+Step 3: Run the Health Monitor
+# Run the monitor (will run for 2 minutes)
+python3 health_monitor.py
+You should see output like:
+
+[2024-01-15 10:30:00] [INFO] Starting health monitor for http://localhost:5000
+[2024-01-15 10:30:00] [INFO] Monitoring endpoints: /health, /api/users, /api/data
+[2024-01-15 10:30:00] [INFO] --- Health Check #1 ---
+[2024-01-15 10:30:00] [INFO] /health is healthy (Response time: 15.23ms)
+[2024-01-15 10:30:01] [INFO] /api/users is healthy (Response time: 22.45ms)
+Step 4: View the Logs
+While the monitor is running (or after it completes), open a new terminal and check the logs:
+
+# View the log file
+cat ~/api-health-monitor/logs/health_monitor.log
+
+# View the current status
+cat ~/api-health-monitor/logs/current_status.json
+
+# Monitor logs in real-time (if still running)
+tail -f ~/api-health-monitor/logs/health_monitor.log
+Step 5: Analyze the Results
+# Count healthy vs unhealthy checks
+grep "is healthy" logs/health_monitor.log | wc -l
+grep "is unhealthy\|is error\|is timeout" logs/health_monitor.log | wc -l
+
+# View only errors
+grep "\[ERROR\]" logs/health_monitor.log
+
+# Check average response times (requires jq)
+sudo apt install -y jq
+cat logs/current_status.json | jq '.endpoints[] | {endpoint: .endpoint, response_time: .response_time}'
+Verification
+Verify Mock API is Running
+# Check if API process is running
+ps aux | grep api_server.py
+
+# Test API manually
+curl -s http://localhost:5000/health | python3 -m json.tool
+Expected output: JSON with status "healthy"
+
+Verify Health Monitor Logs
+# Check log file exists and has content
+ls -lh logs/health_monitor.log
+
+# Verify log entries
+head -20 logs/health_monitor.log
+You should see timestamped log entries with health check results.
+
+Verify Status File
+# Check status file
+cat logs/current_status.json | python3 -m json.tool
+Expected output: JSON with summary showing total, healthy, and unhealthy endpoint counts.
+
+Verify Failure Detection
+The mock API is designed to fail occasionally. Check if failures were detected:
+
+# Look for error logs
+grep -i "error\|unhealthy\|500" logs/health_monitor.log
+You should see some entries showing detected failures.
+
+Cleanup
+# Stop the mock API
+kill $(cat api_pid.txt)
+
+# Verify it stopped
+ps aux | grep api_server.py
+Troubleshooting
+Issue: "Connection refused" errors
+
+Solution: Ensure the mock API is running: python3 mock-api/api_server.py &
+Issue: "Module not found" errors
+
+Solution: Install required packages: pip3 install flask requests
+Issue: Port 5000 already in use
+
+Solution: Find and kill the process: sudo lsof -ti:5000 | xargs kill -9
+Issue: Permission denied on log files
+
+Solution: Check directory permissions: chmod 755 logs/
+Conclusion
+Congratulations! You have successfully:
+
+Created a mock API service with multiple endpoints
+Built a health monitoring system that periodically checks API availability
+Implemented logging for tracking service status over time
+Detected and reported API failures and slow responses
+Analyzed health metrics from log files
+This type of health monitoring is essential in production environments where services must maintain high availability. Cyber professionals use similar tools to ensure system reliability, detect outages quickly, and maintain service level agreements (SLAs). The skills you practiced here form the foundation for more advanced monitoring solutions used in enterprise environments.
