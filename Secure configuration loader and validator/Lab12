@@ -1,0 +1,422 @@
+Secure Configuration Loader and Validator
+Prerequisites
+Basic understanding of Linux command line
+Familiarity with text editors (nano or vi)
+Basic knowledge of Python programming
+Understanding of file permissions in Linux
+Learning Objectives
+By the end of this lab, you will be able to:
+
+Load and parse configuration files securely
+Validate configuration schemas against expected formats
+Detect missing or insecure configuration values
+Implement basic security checks for configuration data
+Handle configuration errors appropriately
+Environment Setup
+Step 1: Update System and Install Python
+sudo apt update
+sudo apt install -y python3 python3-pip python3-venv
+Step 2: Create Lab Directory
+mkdir -p ~/config-security-lab
+cd ~/config-security-lab
+Step 3: Set Up Python Virtual Environment
+python3 -m venv venv
+source venv/bin/activate
+Step 4: Install Required Libraries
+pip install pyyaml jsonschema
+Task 1: Create Sample Configuration Files
+Step 1: Create a Secure Configuration File
+Create a file named config_secure.yaml:
+
+nano config_secure.yaml
+Add the following content:
+
+database:
+  host: localhost
+  port: 5432
+  username: app_user
+  password: "StrongP@ssw0rd123!"
+  ssl_enabled: true
+  
+api:
+  endpoint: https://api.example.com
+  timeout: 30
+  max_retries: 3
+  
+logging:
+  level: INFO
+  file: /var/log/app.log
+Step 2: Create an Insecure Configuration File
+Create a file named config_insecure.yaml:
+
+nano config_insecure.yaml
+Add the following content:
+
+database:
+  host: localhost
+  port: 5432
+  username: root
+  password: "123456"
+  ssl_enabled: false
+  
+api:
+  endpoint: http://api.example.com
+  timeout: 30
+  
+logging:
+  level: DEBUG
+Step 3: Create an Incomplete Configuration File
+Create a file named config_incomplete.yaml:
+
+nano config_incomplete.yaml
+Add the following content:
+
+database:
+  host: localhost
+  port: 5432
+  
+api:
+  endpoint: https://api.example.com
+Task 2: Build the Configuration Validator
+Step 1: Create the Main Python Script
+Create a file named config_validator.py:
+
+nano config_validator.py
+Add the following starter code:
+
+#!/usr/bin/env python3
+"""
+Secure Configuration Loader and Validator
+This script loads configuration files and validates them for security issues.
+"""
+
+import yaml
+import json
+import os
+import re
+from typing import Dict, List, Tuple
+
+class ConfigValidator:
+    """
+    A class to load and validate configuration files for security issues.
+    """
+    
+    def __init__(self, config_path: str):
+        """
+        Initialize the validator with a configuration file path.
+        
+        Args:
+            config_path: Path to the configuration file
+        """
+        self.config_path = config_path
+        self.config_data = None
+        self.errors = []
+        self.warnings = []
+    
+    def load_config(self) -> bool:
+        """
+        Load the configuration file safely.
+        
+        Returns:
+            True if loaded successfully, False otherwise
+        """
+        try:
+            # TODO: Check if file exists
+            if not os.path.exists(self.config_path):
+                self.errors.append(f"Configuration file not found: {self.config_path}")
+                return False
+            
+            # TODO: Check file permissions (should not be world-readable)
+            file_stat = os.stat(self.config_path)
+            file_permissions = oct(file_stat.st_mode)[-3:]
+            
+            if file_permissions[2] != '0':
+                self.warnings.append("Configuration file is world-readable")
+            
+            # TODO: Load YAML file
+            with open(self.config_path, 'r') as file:
+                self.config_data = yaml.safe_load(file)
+            
+            return True
+            
+        except yaml.YAMLError as e:
+            self.errors.append(f"YAML parsing error: {str(e)}")
+            return False
+        except Exception as e:
+            self.errors.append(f"Error loading config: {str(e)}")
+            return False
+    
+    def validate_required_fields(self, required_schema: Dict) -> bool:
+        """
+        Validate that all required fields are present.
+        
+        Args:
+            required_schema: Dictionary defining required fields
+            
+        Returns:
+            True if all required fields present, False otherwise
+        """
+        # TODO: Implement validation logic
+        # Check each section and required field
+        is_valid = True
+        
+        for section, fields in required_schema.items():
+            if section not in self.config_data:
+                self.errors.append(f"Missing required section: {section}")
+                is_valid = False
+                continue
+            
+            for field in fields:
+                if field not in self.config_data[section]:
+                    self.errors.append(f"Missing required field: {section}.{field}")
+                    is_valid = False
+        
+        return is_valid
+    
+    def check_weak_passwords(self) -> List[str]:
+        """
+        Check for weak or common passwords in configuration.
+        
+        Returns:
+            List of fields with weak passwords
+        """
+        weak_passwords = []
+        weak_patterns = ['123456', 'password', 'admin', 'root', '12345']
+        
+        # TODO: Recursively search for password fields
+        def search_passwords(data, path=""):
+            if isinstance(data, dict):
+                for key, value in data.items():
+                    current_path = f"{path}.{key}" if path else key
+                    if 'password' in key.lower() or 'passwd' in key.lower():
+                        # Check password strength
+                        if isinstance(value, str):
+                            # Check length
+                            if len(value) < 8:
+                                weak_passwords.append(f"{current_path}: Too short (< 8 chars)")
+                            # Check for common weak passwords
+                            if value.lower() in weak_patterns:
+                                weak_passwords.append(f"{current_path}: Common weak password")
+                    else:
+                        search_passwords(value, current_path)
+        
+        search_passwords(self.config_data)
+        return weak_passwords
+    
+    def check_insecure_protocols(self) -> List[str]:
+        """
+        Check for insecure protocol usage (HTTP instead of HTTPS, SSL disabled).
+        
+        Returns:
+            List of insecure protocol issues
+        """
+        issues = []
+        
+        # TODO: Check for HTTP URLs
+        def search_urls(data, path=""):
+            if isinstance(data, dict):
+                for key, value in data.items():
+                    current_path = f"{path}.{key}" if path else key
+                    if isinstance(value, str) and value.startswith('http://'):
+                        issues.append(f"{current_path}: Using insecure HTTP protocol")
+                    elif key.lower() in ['ssl_enabled', 'tls_enabled'] and value is False:
+                        issues.append(f"{current_path}: SSL/TLS is disabled")
+                    else:
+                        search_urls(value, current_path)
+        
+        search_urls(self.config_data)
+        return issues
+    
+    def check_dangerous_settings(self) -> List[str]:
+        """
+        Check for dangerous configuration settings.
+        
+        Returns:
+            List of dangerous settings found
+        """
+        dangerous = []
+        
+        # TODO: Check for debug mode in production
+        if self.config_data.get('logging', {}).get('level') == 'DEBUG':
+            self.warnings.append("Debug logging enabled - may expose sensitive information")
+        
+        # TODO: Check for root/admin usernames
+        db_user = self.config_data.get('database', {}).get('username', '')
+        if db_user.lower() in ['root', 'admin', 'administrator']:
+            dangerous.append(f"Using privileged username: {db_user}")
+        
+        return dangerous
+    
+    def generate_report(self) -> str:
+        """
+        Generate a comprehensive validation report.
+        
+        Returns:
+            Formatted report string
+        """
+        report = []
+        report.append("=" * 60)
+        report.append("CONFIGURATION SECURITY VALIDATION REPORT")
+        report.append("=" * 60)
+        report.append(f"\nConfiguration File: {self.config_path}\n")
+        
+        # Errors
+        if self.errors:
+            report.append("\n[ERRORS] - Critical Issues:")
+            for error in self.errors:
+                report.append(f"  - {error}")
+        
+        # Warnings
+        if self.warnings:
+            report.append("\n[WARNINGS] - Security Concerns:")
+            for warning in self.warnings:
+                report.append(f"  - {warning}")
+        
+        # Summary
+        if not self.errors and not self.warnings:
+            report.append("\n[SUCCESS] Configuration passed all security checks!")
+        else:
+            report.append(f"\nTotal Errors: {len(self.errors)}")
+            report.append(f"Total Warnings: {len(self.warnings)}")
+        
+        report.append("\n" + "=" * 60)
+        return "\n".join(report)
+
+
+def main():
+    """
+    Main function to run the configuration validator.
+    """
+    # Define required schema
+    required_schema = {
+        'database': ['host', 'port', 'username', 'password'],
+        'api': ['endpoint', 'timeout'],
+        'logging': ['level']
+    }
+    
+    # Test configurations
+    config_files = [
+        'config_secure.yaml',
+        'config_insecure.yaml',
+        'config_incomplete.yaml'
+    ]
+    
+    for config_file in config_files:
+        print(f"\n\nValidating: {config_file}")
+        print("-" * 60)
+        
+        validator = ConfigValidator(config_file)
+        
+        # Load configuration
+        if not validator.load_config():
+            print(validator.generate_report())
+            continue
+        
+        # Validate required fields
+        validator.validate_required_fields(required_schema)
+        
+        # Check for weak passwords
+        weak_passwords = validator.check_weak_passwords()
+        for issue in weak_passwords:
+            validator.warnings.append(f"Weak password: {issue}")
+        
+        # Check for insecure protocols
+        insecure_protocols = validator.check_insecure_protocols()
+        for issue in insecure_protocols:
+            validator.warnings.append(f"Insecure protocol: {issue}")
+        
+        # Check for dangerous settings
+        dangerous_settings = validator.check_dangerous_settings()
+        for issue in dangerous_settings:
+            validator.warnings.append(f"Dangerous setting: {issue}")
+        
+        # Generate and print report
+        print(validator.generate_report())
+
+
+if __name__ == "__main__":
+    main()
+Step 2: Make the Script Executable
+chmod +x config_validator.py
+Step 3: Run the Validator
+python3 config_validator.py
+Verification
+Step 1: Check Output for All Three Configurations
+You should see three separate reports:
+
+config_secure.yaml: Should pass most checks with minimal warnings
+config_insecure.yaml: Should show multiple warnings about weak password, HTTP usage, and SSL disabled
+config_incomplete.yaml: Should show errors for missing required fields
+Step 2: Test File Permission Checking
+Make a config file world-readable and test:
+
+chmod 644 config_secure.yaml
+python3 config_validator.py
+You should see a warning about world-readable permissions.
+
+Fix the permissions:
+
+chmod 600 config_secure.yaml
+Step 3: Create Your Own Test Configuration
+Create config_test.yaml with intentional issues:
+
+nano config_test.yaml
+Add content with various security issues and run the validator to verify detection.
+
+Expected Outcomes
+After completing this lab, you should have:
+
+A working configuration validator that can:
+
+Load YAML configuration files safely
+Check file permissions
+Validate required fields are present
+Detect weak passwords
+Identify insecure protocols (HTTP vs HTTPS)
+Flag dangerous settings (debug mode, privileged usernames)
+Understanding of common configuration security issues:
+
+Weak passwords in config files
+Unencrypted protocols
+Missing SSL/TLS
+Overly permissive file permissions
+Debug mode in production
+Practical experience with:
+
+Python YAML parsing
+Schema validation
+Security best practices for configuration management
+Troubleshooting
+Issue: YAML parsing errors
+Solution: Ensure proper YAML indentation (use spaces, not tabs)
+
+Issue: Module not found errors
+Solution: Verify virtual environment is activated:
+
+source venv/bin/activate
+pip install pyyaml jsonschema
+Issue: Permission denied when reading config
+Solution: Check file ownership and permissions:
+
+ls -l config_*.yaml
+chmod 600 config_*.yaml
+Issue: Script doesn't detect issues
+Solution: Verify config files contain the test data as specified in Task 1
+
+Conclusion
+In this lab, you successfully created a secure configuration loader and validator that can identify common security issues in configuration files. You learned how to:
+
+Parse YAML configuration files safely
+Validate configuration schemas
+Detect weak passwords and insecure protocols
+Check file permissions for security
+Generate comprehensive security reports
+These skills are essential for cybersecurity professionals who need to ensure applications are configured securely. Configuration vulnerabilities are a common attack vector, and automated validation helps prevent security breaches before deployment.
+
+Key Takeaways:
+
+Always validate configuration files before using them
+Never store passwords in plain text (use secrets management)
+Use HTTPS and enable SSL/TLS for all network communications
+Restrict file permissions on configuration files (600 or 640)
+Avoid debug mode and verbose logging in production environments
