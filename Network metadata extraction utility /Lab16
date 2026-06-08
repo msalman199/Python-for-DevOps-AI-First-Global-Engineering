@@ -1,0 +1,362 @@
+Network Metadata Extraction Utility
+Prerequisites
+Basic Linux command line knowledge
+Understanding of IP addresses and ports
+Familiarity with text file operations
+Python 3.x basics (variables, functions, loops)
+Learning Objectives
+By completing this lab, you will:
+
+Extract network intelligence from log files and packet captures
+Parse IP addresses, ports, and protocols from network data
+Enrich metadata with geolocation and service information
+Create a reusable network metadata extraction utility
+Environment Setup
+Al Nafi provides a bare-metal Linux machine. Click Start Lab to begin.
+
+Install Required Tools
+# Update package manager
+sudo apt update
+
+# Install Python 3 and pip
+sudo apt install -y python3 python3-pip
+
+# Install network analysis tools
+sudo apt install -y tcpdump tshark
+
+# Install Python libraries
+pip3 install geoip2-database maxminddb-geolite2 python-whois
+Create Working Directory
+mkdir ~/network-metadata-lab
+cd ~/network-metadata-lab
+Task 1: Generate Sample Network Data
+Step 1: Create Sample Network Log File
+Create a simulated network log file for analysis:
+
+cat > network_traffic.log << 'EOF'
+2024-01-15 10:23:45 TCP 192.168.1.100:45678 -> 8.8.8.8:53
+2024-01-15 10:23:46 UDP 192.168.1.100:54321 -> 1.1.1.1:53
+2024-01-15 10:24:12 TCP 192.168.1.105:49152 -> 93.184.216.34:80
+2024-01-15 10:24:15 TCP 192.168.1.105:49153 -> 93.184.216.34:443
+2024-01-15 10:25:01 TCP 192.168.1.110:51234 -> 140.82.121.4:443
+2024-01-15 10:25:30 UDP 192.168.1.100:68 -> 192.168.1.1:67
+2024-01-15 10:26:45 TCP 192.168.1.120:55678 -> 151.101.1.140:443
+2024-01-15 10:27:10 TCP 192.168.1.100:60123 -> 172.217.14.206:443
+EOF
+Step 2: Capture Live Network Traffic (Optional)
+Generate some real traffic for analysis:
+
+# Capture 20 packets to a file (run as sudo)
+sudo timeout 10 tcpdump -i any -c 20 -w capture.pcap 2>/dev/null
+
+# Convert pcap to readable format
+tshark -r capture.pcap -T fields -e frame.time -e ip.proto -e ip.src -e tcp.srcport -e udp.srcport -e ip.dst -e tcp.dstport -e udp.dstport 2>/dev/null > live_traffic.txt
+Task 2: Build Network Metadata Extraction Utility
+Step 1: Create the Main Python Script
+Create network_metadata_extractor.py:
+
+#!/usr/bin/env python3
+"""
+Network Metadata Extraction Utility
+Extracts and enriches network intelligence from log files
+"""
+
+import re
+import json
+from collections import defaultdict
+from datetime import datetime
+
+# Try to import geolocation library
+try:
+    from geolite2 import geolite2
+    GEOIP_AVAILABLE = True
+except ImportError:
+    GEOIP_AVAILABLE = False
+    print("Note: GeoIP not available. Install with: pip3 install maxminddb-geolite2")
+
+
+class NetworkMetadataExtractor:
+    """Extract and enrich network metadata from logs"""
+    
+    def __init__(self):
+        self.connections = []
+        self.stats = defaultdict(int)
+        
+        # Common port to service mapping
+        self.port_services = {
+            20: "FTP-DATA", 21: "FTP", 22: "SSH", 23: "TELNET",
+            25: "SMTP", 53: "DNS", 67: "DHCP", 68: "DHCP",
+            80: "HTTP", 110: "POP3", 143: "IMAP", 443: "HTTPS",
+            445: "SMB", 3306: "MySQL", 3389: "RDP", 5432: "PostgreSQL",
+            8080: "HTTP-Proxy", 8443: "HTTPS-Alt"
+        }
+        
+        # Protocol number to name mapping
+        self.protocols = {
+            1: "ICMP", 6: "TCP", 17: "UDP"
+        }
+    
+    def parse_log_line(self, line):
+        """
+        Parse a single log line and extract network metadata.
+        
+        Expected format: TIMESTAMP PROTOCOL SRC_IP:SRC_PORT -> DST_IP:DST_PORT
+        
+        Args:
+            line: String containing log entry
+            
+        Returns:
+            Dictionary with parsed metadata or None if parsing fails
+        """
+        # TODO: Implement regex pattern to extract components
+        # Pattern should capture: timestamp, protocol, src_ip, src_port, dst_ip, dst_port
+        pattern = r'(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(\w+)\s+([\d.]+):(\d+)\s+->\s+([\d.]+):(\d+)'
+        
+        match = re.search(pattern, line)
+        if not match:
+            return None
+        
+        timestamp, protocol, src_ip, src_port, dst_ip, dst_port = match.groups()
+        
+        # TODO: Create metadata dictionary with parsed values
+        metadata = {
+            'timestamp': timestamp,
+            'protocol': protocol,
+            'src_ip': src_ip,
+            'src_port': int(src_port),
+            'dst_ip': dst_ip,
+            'dst_port': int(dst_port)
+        }
+        
+        return metadata
+    
+    def enrich_metadata(self, metadata):
+        """
+        Enrich metadata with additional intelligence.
+        
+        Args:
+            metadata: Dictionary with basic network metadata
+            
+        Returns:
+            Enhanced metadata dictionary
+        """
+        # TODO: Add service identification based on destination port
+        dst_port = metadata['dst_port']
+        metadata['service'] = self.port_services.get(dst_port, f"Unknown-{dst_port}")
+        
+        # TODO: Add geolocation for destination IP (if available)
+        if GEOIP_AVAILABLE:
+            try:
+                reader = geolite2.reader()
+                geo_data = reader.get(metadata['dst_ip'])
+                if geo_data:
+                    metadata['dst_country'] = geo_data.get('country', {}).get('iso_code', 'Unknown')
+                    metadata['dst_city'] = geo_data.get('city', {}).get('names', {}).get('en', 'Unknown')
+                else:
+                    metadata['dst_country'] = 'Private/Unknown'
+            except:
+                metadata['dst_country'] = 'Error'
+        
+        # TODO: Classify IP as internal or external
+        metadata['dst_type'] = self._classify_ip(metadata['dst_ip'])
+        
+        return metadata
+    
+    def _classify_ip(self, ip):
+        """
+        Classify IP address as internal or external.
+        
+        Args:
+            ip: IP address string
+            
+        Returns:
+            String: 'Internal' or 'External'
+        """
+        # TODO: Check if IP is in private ranges
+        # Private ranges: 10.x.x.x, 172.16-31.x.x, 192.168.x.x
+        octets = ip.split('.')
+        if octets[0] == '10':
+            return 'Internal'
+        elif octets[0] == '172' and 16 <= int(octets[1]) <= 31:
+            return 'Internal'
+        elif octets[0] == '192' and octets[1] == '168':
+            return 'Internal'
+        else:
+            return 'External'
+    
+    def process_log_file(self, filename):
+        """
+        Process entire log file and extract all metadata.
+        
+        Args:
+            filename: Path to log file
+        """
+        print(f"[*] Processing log file: {filename}")
+        
+        # TODO: Read file and process each line
+        with open(filename, 'r') as f:
+            for line_num, line in enumerate(f, 1):
+                metadata = self.parse_log_line(line)
+                
+                if metadata:
+                    # Enrich the metadata
+                    enriched = self.enrich_metadata(metadata)
+                    self.connections.append(enriched)
+                    
+                    # Update statistics
+                    self.stats['total_connections'] += 1
+                    self.stats[f"protocol_{enriched['protocol']}"] += 1
+                    self.stats[f"service_{enriched['service']}"] += 1
+        
+        print(f"[+] Processed {self.stats['total_connections']} connections")
+    
+    def generate_report(self):
+        """Generate and display analysis report"""
+        print("\n" + "="*60)
+        print("NETWORK METADATA EXTRACTION REPORT")
+        print("="*60)
+        
+        # TODO: Display summary statistics
+        print(f"\n[*] Total Connections: {self.stats['total_connections']}")
+        
+        # Protocol breakdown
+        print("\n[*] Protocol Distribution:")
+        for key, value in self.stats.items():
+            if key.startswith('protocol_'):
+                protocol = key.replace('protocol_', '')
+                print(f"    {protocol}: {value}")
+        
+        # Service breakdown
+        print("\n[*] Top Services:")
+        services = [(k.replace('service_', ''), v) for k, v in self.stats.items() if k.startswith('service_')]
+        services.sort(key=lambda x: x[1], reverse=True)
+        for service, count in services[:5]:
+            print(f"    {service}: {count}")
+        
+        # TODO: Display unique IPs
+        unique_dst_ips = set(conn['dst_ip'] for conn in self.connections)
+        print(f"\n[*] Unique Destination IPs: {len(unique_dst_ips)}")
+        
+        # External vs Internal
+        external_count = sum(1 for conn in self.connections if conn.get('dst_type') == 'External')
+        internal_count = sum(1 for conn in self.connections if conn.get('dst_type') == 'Internal')
+        print(f"\n[*] Traffic Distribution:")
+        print(f"    External: {external_count}")
+        print(f"    Internal: {internal_count}")
+    
+    def export_json(self, output_file):
+        """
+        Export enriched metadata to JSON file.
+        
+        Args:
+            output_file: Path to output JSON file
+        """
+        # TODO: Write connections to JSON file
+        with open(output_file, 'w') as f:
+            json.dump({
+                'metadata': self.connections,
+                'statistics': dict(self.stats),
+                'generated_at': datetime.now().isoformat()
+            }, f, indent=2)
+        
+        print(f"\n[+] Exported metadata to: {output_file}")
+
+
+def main():
+    """Main execution function"""
+    print("Network Metadata Extraction Utility")
+    print("-" * 60)
+    
+    # TODO: Create extractor instance
+    extractor = NetworkMetadataExtractor()
+    
+    # TODO: Process the log file
+    extractor.process_log_file('network_traffic.log')
+    
+    # TODO: Generate report
+    extractor.generate_report()
+    
+    # TODO: Export to JSON
+    extractor.export_json('network_metadata.json')
+    
+    print("\n[+] Analysis complete!")
+
+
+if __name__ == "__main__":
+    main()
+Step 2: Run the Metadata Extractor
+# Make script executable
+chmod +x network_metadata_extractor.py
+
+# Run the extractor
+python3 network_metadata_extractor.py
+Step 3: Examine the Output
+# View the JSON output
+cat network_metadata.json | python3 -m json.tool | head -30
+
+# Count connections by service
+cat network_metadata.json | python3 -c "import json, sys; data=json.load(sys.stdin); services={}; [services.update({m['service']: services.get(m['service'], 0) + 1}) for m in data['metadata']]; print('\n'.join(f'{k}: {v}' for k,v in sorted(services.items(), key=lambda x: x[1], reverse=True)))"
+Verification
+Verify Extraction Functionality
+# Check that JSON file was created
+ls -lh network_metadata.json
+
+# Verify connection count
+python3 << 'EOF'
+import json
+with open('network_metadata.json', 'r') as f:
+    data = json.load(f)
+    print(f"Total connections extracted: {len(data['metadata'])}")
+    print(f"Unique services identified: {len(set(m['service'] for m in data['metadata']))}")
+EOF
+Test with Custom Data
+# Create a test case
+echo "2024-01-15 11:00:00 TCP 10.0.0.5:12345 -> 142.250.185.46:443" > test_input.log
+
+# Modify and run extractor on test file
+python3 << 'EOF'
+from network_metadata_extractor import NetworkMetadataExtractor
+
+extractor = NetworkMetadataExtractor()
+extractor.process_log_file('test_input.log')
+extractor.generate_report()
+EOF
+Expected Results
+Script successfully parses all log entries
+JSON file contains enriched metadata with services identified
+Report shows protocol and service distribution
+IP addresses classified as Internal/External
+No parsing errors for valid log formats
+Troubleshooting
+Issue: GeoIP library not working
+
+Solution: This is optional. The script works without it, just won't show country/city data
+Issue: No connections parsed
+
+Solution: Check log file format matches expected pattern. Verify file exists and is readable
+Issue: JSON file empty
+
+Solution: Ensure log file has valid entries. Check file permissions
+Issue: Import errors
+
+Solution: Reinstall Python libraries: pip3 install --user maxminddb-geolite2
+Conclusion
+You have successfully created a network metadata extraction utility that:
+
+Parses network traffic logs to extract IPs, ports, and protocols
+Enriches metadata with service identification and IP classification
+Generates statistical reports on network activity
+Exports structured data for further analysis
+This utility is valuable for:
+
+Security monitoring and threat detection
+Network traffic analysis and optimization
+Incident response and forensics
+Compliance and audit reporting
+Key Skills Demonstrated:
+
+Regular expression pattern matching for log parsing
+Data enrichment and classification techniques
+Statistical analysis of network traffic
+JSON data export for integration with other tools
+The techniques learned here form the foundation for building more advanced network security and monitoring tools used by cybersecurity professionals daily.
