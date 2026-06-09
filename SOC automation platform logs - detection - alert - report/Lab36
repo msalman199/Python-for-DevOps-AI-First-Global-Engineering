@@ -1,0 +1,348 @@
+SOC Automation Platform
+Prerequisites
+Basic Linux command line knowledge
+Understanding of log files and their structure
+Familiarity with text editors (nano or vi)
+Basic understanding of security concepts (threats, alerts)
+Learning Objectives
+By the end of this lab, you will be able to:
+
+Set up a basic SOC automation workflow on a single Linux machine
+Ingest and parse security logs
+Detect simulated threats using pattern matching
+Generate automated alerts based on detections
+Create simple security reports
+Environment Setup
+You will use the bare-metal Linux machine provided by Al Nafi. All tools will be installed during this lab.
+
+Install Required Tools
+# Update package manager
+sudo apt update
+
+# Install Python3 and pip (if not already installed)
+sudo apt install -y python3 python3-pip
+
+# Install required Python libraries
+pip3 install watchdog
+Create Working Directory
+# Create lab directory structure
+mkdir -p ~/soc-lab/{logs,scripts,alerts,reports}
+cd ~/soc-lab
+Task 1: Generate Sample Security Logs
+Step 1: Create Log Generator Script
+Create a script to simulate security logs:
+
+nano scripts/log_generator.py
+Add the following code:
+
+#!/usr/bin/env python3
+"""
+Simple log generator for SOC simulation
+Generates sample security events including normal and suspicious activities
+"""
+import time
+import random
+from datetime import datetime
+
+# Define log patterns
+NORMAL_EVENTS = [
+    "User login successful from 192.168.1.{} - user: employee{}",
+    "File accessed: /home/user{}/documents/report.pdf",
+    "Service started: web_server on port 80"
+]
+
+SUSPICIOUS_EVENTS = [
+    "Failed login attempt from 10.0.0.{} - user: admin - attempt {}",
+    "Port scan detected from 203.0.113.{} targeting ports 22,23,3389",
+    "Unusual outbound connection to 198.51.100.{} on port 4444",
+    "Multiple failed sudo attempts - user: guest{}"
+]
+
+def generate_log_entry(event_type):
+    """
+    Generate a single log entry
+    
+    Args:
+        event_type: 'normal' or 'suspicious'
+    """
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # TODO: Select event based on type
+    # TODO: Format with random values
+    # TODO: Return formatted log string
+    pass
+
+def main():
+    """Main function to generate continuous logs"""
+    log_file = "../logs/security.log"
+    
+    print("Starting log generation... (Press Ctrl+C to stop)")
+    
+    # TODO: Open log file in append mode
+    # TODO: Generate logs in a loop
+    # TODO: Mix normal (80%) and suspicious (20%) events
+    # TODO: Write to file with timestamp
+    # TODO: Sleep between events
+    pass
+
+if __name__ == "__main__":
+    main()
+Your task: Complete the generate_log_entry() and main() functions to:
+
+Select appropriate event templates
+Insert random IP addresses and user numbers
+Write logs continuously to the file
+Step 2: Run Log Generator
+# Make script executable
+chmod +x scripts/log_generator.py
+
+# Run in background
+python3 scripts/log_generator.py &
+
+# Note the process ID for later
+echo $! > /tmp/log_generator.pid
+Let it run for 30 seconds, then verify:
+
+# Check generated logs
+head -20 logs/security.log
+Task 2: Create Threat Detection Engine
+Step 1: Build Detection Script
+Create the detection engine:
+
+nano scripts/threat_detector.py
+Add this template:
+
+#!/usr/bin/env python3
+"""
+Threat detection engine
+Monitors logs and identifies suspicious patterns
+"""
+import re
+from datetime import datetime
+
+# Define threat signatures
+THREAT_PATTERNS = {
+    'brute_force': r'Failed login attempt.*user: admin',
+    'port_scan': r'Port scan detected',
+    'suspicious_connection': r'Unusual outbound connection.*port 4444',
+    'privilege_escalation': r'Multiple failed sudo attempts'
+}
+
+def analyze_log_line(line):
+    """
+    Analyze a single log line for threats
+    
+    Args:
+        line: Log line string
+    
+    Returns:
+        Dictionary with threat info or None
+    """
+    # TODO: Check line against each threat pattern
+    # TODO: If match found, extract details
+    # TODO: Return threat dictionary with:
+    #       - threat_type
+    #       - timestamp
+    #       - raw_log
+    # TODO: Return None if no threat detected
+    pass
+
+def monitor_logs(log_file, alert_file):
+    """
+    Continuously monitor log file for threats
+    
+    Args:
+        log_file: Path to security log
+        alert_file: Path to write alerts
+    """
+    print(f"Monitoring {log_file} for threats...")
+    
+    # TODO: Open log file and seek to end
+    # TODO: Continuously read new lines
+    # TODO: Analyze each line
+    # TODO: Write alerts to alert_file
+    # TODO: Print detection to console
+    pass
+
+def main():
+    log_file = "../logs/security.log"
+    alert_file = "../alerts/threats.txt"
+    
+    # TODO: Call monitor_logs function
+    pass
+
+if __name__ == "__main__":
+    main()
+Your task: Implement the detection logic to:
+
+Match log lines against threat patterns using regex
+Extract relevant information from matches
+Write alerts to the alerts file
+Display detections in real-time
+Step 2: Run Threat Detector
+# Make executable
+chmod +x scripts/threat_detector.py
+
+# Run detector (let it run for 1 minute)
+python3 scripts/threat_detector.py &
+echo $! > /tmp/detector.pid
+
+# Wait and check alerts
+sleep 60
+cat alerts/threats.txt
+Task 3: Generate Automated Reports
+Step 1: Create Report Generator
+nano scripts/report_generator.py
+Add this code:
+
+#!/usr/bin/env python3
+"""
+Security report generator
+Creates summary reports from detected threats
+"""
+from datetime import datetime
+from collections import Counter
+
+def parse_alerts(alert_file):
+    """
+    Parse alert file and extract threat information
+    
+    Args:
+        alert_file: Path to alerts file
+    
+    Returns:
+        List of threat dictionaries
+    """
+    threats = []
+    
+    # TODO: Read alert file
+    # TODO: Parse each alert line
+    # TODO: Extract threat type and timestamp
+    # TODO: Append to threats list
+    
+    return threats
+
+def generate_summary(threats):
+    """
+    Generate summary statistics from threats
+    
+    Args:
+        threats: List of threat dictionaries
+    
+    Returns:
+        Dictionary with summary statistics
+    """
+    summary = {
+        'total_threats': 0,
+        'threat_breakdown': {},
+        'report_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    # TODO: Count total threats
+    # TODO: Count threats by type
+    # TODO: Calculate percentages
+    
+    return summary
+
+def create_report(summary, output_file):
+    """
+    Create formatted report file
+    
+    Args:
+        summary: Summary statistics dictionary
+        output_file: Path to output report
+    """
+    # TODO: Open output file
+    # TODO: Write report header
+    # TODO: Write summary statistics
+    # TODO: Write threat breakdown
+    # TODO: Add recommendations based on findings
+    pass
+
+def main():
+    alert_file = "../alerts/threats.txt"
+    report_file = "../reports/security_report.txt"
+    
+    print("Generating security report...")
+    
+    # TODO: Parse alerts
+    # TODO: Generate summary
+    # TODO: Create report
+    
+    print(f"Report saved to {report_file}")
+
+if __name__ == "__main__":
+    main()
+Your task: Complete the report generator to:
+
+Parse the alerts file
+Count and categorize threats
+Generate a formatted report with statistics
+Step 2: Generate Report
+# Stop log generator and detector
+kill $(cat /tmp/log_generator.pid)
+kill $(cat /tmp/detector.pid)
+
+# Generate report
+chmod +x scripts/report_generator.py
+python3 scripts/report_generator.py
+
+# View report
+cat reports/security_report.txt
+Verification
+Check Complete Workflow
+# 1. Verify logs were generated
+echo "=== Log Sample ==="
+head -10 logs/security.log
+
+# 2. Verify threats were detected
+echo "=== Detected Threats ==="
+cat alerts/threats.txt | wc -l
+echo "threats detected"
+
+# 3. Verify report was created
+echo "=== Security Report ==="
+cat reports/security_report.txt
+
+# 4. Check directory structure
+echo "=== Lab Structure ==="
+tree ~/soc-lab
+Expected Results
+You should see:
+
+Security logs in logs/security.log with timestamps
+Threat alerts in alerts/threats.txt showing detected suspicious activities
+A formatted report in reports/security_report.txt with statistics
+At least 4-5 different threat types detected
+Troubleshooting Tips
+Issue: No logs generated
+
+Check if log_generator.py is running: ps aux | grep log_generator
+Verify write permissions: ls -la logs/
+Check for Python errors in the script
+Issue: No threats detected
+
+Ensure log file has suspicious events: grep -i "failed\|scan\|unusual" logs/security.log
+Verify regex patterns match log format
+Check if detector script is running
+Issue: Empty report
+
+Confirm alerts file exists and has content: cat alerts/threats.txt
+Check file paths in report_generator.py
+Verify parsing logic handles alert format correctly
+Conclusion
+Congratulations! You have successfully built a basic SOC automation platform that:
+
+Ingests logs: Generated and collected security event logs
+Detects threats: Identified suspicious patterns using signature-based detection
+Generates alerts: Created real-time alerts for detected threats
+Produces reports: Automated security reporting with statistics
+This workflow demonstrates the core components of Security Operations Centers used by organizations worldwide. In production environments, these systems scale to handle millions of events per day, integrate with SIEM platforms, and use machine learning for advanced threat detection.
+
+Key Takeaways:
+
+Log monitoring is essential for security visibility
+Pattern matching enables automated threat detection
+Automation reduces response time to security incidents
+Reports help security teams prioritize and track threats
+Next Steps: Enhance this platform by adding email notifications, integrating with threat intelligence feeds, or implementing more sophisticated detection algorithms.
