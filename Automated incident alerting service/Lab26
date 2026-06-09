@@ -1,0 +1,406 @@
+Automated Incident Alerting Service
+Prerequisites
+Basic Linux command line knowledge
+Understanding of file permissions and text editing
+Familiarity with log files
+Basic Python programming concepts
+Learning Objectives
+By completing this lab, you will:
+
+Understand automated security incident detection
+Configure alert triggers based on security events
+Format and send notifications via multiple channels
+Implement a basic Security Information and Event Management (SIEM) workflow
+Environment Setup
+After clicking "Start Lab", you'll have access to a bare-metal Linux machine. Install the required tools:
+
+# Update package manager
+sudo apt update
+
+# Install Python and pip
+sudo apt install -y python3 python3-pip
+
+# Install required Python libraries
+pip3 install watchdog pyyaml
+
+# Create working directory
+mkdir -p ~/incident-alerting
+cd ~/incident-alerting
+Task 1: Create Incident Detection System
+Step 1: Set Up Log Monitoring Structure
+Create directories for logs and configuration:
+
+# Create directory structure
+mkdir -p logs alerts config
+
+# Create a sample security log file
+touch logs/security.log
+Step 2: Create Configuration File
+Create config/alert_config.yaml:
+
+# Alert configuration
+alert_rules:
+  - name: "Failed Login Attempt"
+    pattern: "Failed password"
+    severity: "medium"
+    threshold: 3
+  
+  - name: "Root Access"
+    pattern: "root login"
+    severity: "high"
+    threshold: 1
+  
+  - name: "Port Scan Detected"
+    pattern: "port scan"
+    severity: "high"
+    threshold: 1
+
+notification:
+  email_enabled: false
+  log_file: "alerts/incidents.log"
+  console_enabled: true
+Step 3: Create Incident Monitor Script
+Create incident_monitor.py:
+
+#!/usr/bin/env python3
+"""
+Incident Monitoring System
+Monitors security logs and triggers alerts based on patterns
+"""
+
+import time
+import yaml
+import re
+from datetime import datetime
+from collections import defaultdict
+
+class IncidentMonitor:
+    def __init__(self, config_file):
+        """
+        Initialize the incident monitor
+        
+        Args:
+            config_file: Path to YAML configuration file
+        """
+        # TODO: Load configuration from YAML file
+        # Hint: Use yaml.safe_load()
+        pass
+    
+    def load_config(self, config_file):
+        """Load alert rules from configuration file"""
+        # TODO: Open and parse YAML configuration
+        # TODO: Store alert_rules and notification settings
+        pass
+    
+    def check_pattern(self, log_line, rule):
+        """
+        Check if log line matches alert pattern
+        
+        Args:
+            log_line: Single line from log file
+            rule: Alert rule dictionary
+        
+        Returns:
+            Boolean indicating if pattern matched
+        """
+        # TODO: Use re.search() to find pattern in log_line
+        # TODO: Return True if pattern found, False otherwise
+        pass
+    
+    def monitor_log(self, log_file):
+        """
+        Monitor log file for security incidents
+        
+        Args:
+            log_file: Path to security log file
+        """
+        print(f"[*] Starting incident monitor on {log_file}")
+        
+        # TODO: Open log file and seek to end
+        # TODO: Continuously read new lines
+        # TODO: For each line, check against all rules
+        # TODO: Track pattern counts and trigger alerts when threshold reached
+        pass
+
+# Main execution
+if __name__ == "__main__":
+    monitor = IncidentMonitor("config/alert_config.yaml")
+    monitor.monitor_log("logs/security.log")
+Starter implementation hint:
+
+# Example of loading YAML config
+with open(config_file, 'r') as f:
+    config = yaml.safe_load(f)
+    self.rules = config['alert_rules']
+    self.notification = config['notification']
+
+# Example of pattern matching
+if re.search(rule['pattern'], log_line, re.IGNORECASE):
+    return True
+Task 2: Implement Alert Formatting and Notification
+Step 1: Create Alert Formatter
+Create alert_formatter.py:
+
+#!/usr/bin/env python3
+"""
+Alert Formatting and Notification System
+Formats incident alerts and sends notifications
+"""
+
+from datetime import datetime
+import os
+
+class AlertFormatter:
+    def __init__(self, notification_config):
+        """
+        Initialize alert formatter
+        
+        Args:
+            notification_config: Dictionary with notification settings
+        """
+        # TODO: Store notification configuration
+        # TODO: Initialize alert log file path
+        pass
+    
+    def format_alert(self, rule_name, severity, log_entry, count):
+        """
+        Format alert message with incident details
+        
+        Args:
+            rule_name: Name of triggered rule
+            severity: Alert severity level
+            log_entry: Original log entry that triggered alert
+            count: Number of occurrences
+        
+        Returns:
+            Formatted alert string
+        """
+        # TODO: Create timestamp
+        # TODO: Format alert with severity, rule name, count, and log entry
+        # TODO: Return formatted string
+        pass
+    
+    def send_alert(self, alert_message):
+        """
+        Send alert through configured channels
+        
+        Args:
+            alert_message: Formatted alert message
+        """
+        # TODO: If console enabled, print to stdout
+        # TODO: If log file enabled, append to alert log
+        # TODO: Add timestamp and separator
+        pass
+    
+    def write_to_log(self, message):
+        """Write alert to log file"""
+        # TODO: Open alert log file in append mode
+        # TODO: Write message with timestamp
+        # TODO: Add separator line
+        pass
+
+# Example usage
+if __name__ == "__main__":
+    config = {
+        'log_file': 'alerts/incidents.log',
+        'console_enabled': True
+    }
+    
+    formatter = AlertFormatter(config)
+    # Test alert formatting
+    test_alert = formatter.format_alert(
+        "Failed Login Attempt",
+        "medium",
+        "Failed password for user admin",
+        3
+    )
+    formatter.send_alert(test_alert)
+Formatting example:
+
+# Alert format template
+alert_template = f"""
+{'='*60}
+SECURITY ALERT
+{'='*60}
+Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Rule: {rule_name}
+Severity: {severity.upper()}
+Occurrences: {count}
+Log Entry: {log_entry}
+{'='*60}
+"""
+Step 2: Integrate Monitor and Alerting
+Create integrated_system.py:
+
+#!/usr/bin/env python3
+"""
+Integrated Incident Alerting System
+Combines monitoring and alerting functionality
+"""
+
+import time
+import yaml
+import re
+from datetime import datetime
+from collections import defaultdict
+from alert_formatter import AlertFormatter
+
+class IntegratedAlertSystem:
+    def __init__(self, config_file):
+        """Initialize integrated system"""
+        with open(config_file, 'r') as f:
+            config = yaml.safe_load(f)
+        
+        self.rules = config['alert_rules']
+        self.formatter = AlertFormatter(config['notification'])
+        self.incident_counts = defaultdict(int)
+        self.last_alert_time = {}
+    
+    def process_log_line(self, line):
+        """
+        Process single log line and check for incidents
+        
+        Args:
+            line: Log line to process
+        """
+        # TODO: Loop through each rule
+        # TODO: Check if pattern matches
+        # TODO: Increment counter for matched rule
+        # TODO: If threshold reached, format and send alert
+        # TODO: Reset counter after alert sent
+        pass
+    
+    def monitor(self, log_file):
+        """
+        Main monitoring loop
+        
+        Args:
+            log_file: Path to log file to monitor
+        """
+        print(f"[*] Monitoring {log_file} for security incidents...")
+        
+        # TODO: Open log file
+        # TODO: Seek to end of file
+        # TODO: Continuously read new lines
+        # TODO: Process each line with process_log_line()
+        # TODO: Sleep briefly between checks
+        pass
+
+if __name__ == "__main__":
+    system = IntegratedAlertSystem("config/alert_config.yaml")
+    system.monitor("logs/security.log")
+Step 3: Create Test Log Generator
+Create generate_test_logs.py:
+
+#!/usr/bin/env python3
+"""
+Test Log Generator
+Generates sample security log entries for testing
+"""
+
+import time
+import random
+from datetime import datetime
+
+def generate_log_entry(event_type):
+    """Generate a log entry based on event type"""
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    events = {
+        'failed_login': f"{timestamp} sshd[1234]: Failed password for admin from 192.168.1.100",
+        'root_access': f"{timestamp} su: root login on tty1",
+        'port_scan': f"{timestamp} firewall: port scan detected from 10.0.0.50",
+        'normal': f"{timestamp} sshd[5678]: Accepted publickey for user from 192.168.1.10"
+    }
+    
+    return events.get(event_type, events['normal'])
+
+def generate_test_logs(log_file, count=20):
+    """
+    Generate test security logs
+    
+    Args:
+        log_file: Path to log file
+        count: Number of log entries to generate
+    """
+    # TODO: Open log file in append mode
+    # TODO: Generate mix of normal and security events
+    # TODO: Write entries with delays to simulate real-time
+    pass
+
+if __name__ == "__main__":
+    print("[*] Generating test security logs...")
+    # Generate 5 failed logins, 1 root access, 2 port scans, rest normal
+    with open("logs/security.log", "a") as f:
+        for i in range(5):
+            f.write(generate_log_entry('failed_login') + "\n")
+            time.sleep(1)
+        
+        f.write(generate_log_entry('root_access') + "\n")
+        time.sleep(1)
+        
+        for i in range(2):
+            f.write(generate_log_entry('port_scan') + "\n")
+            time.sleep(1)
+    
+    print("[+] Test logs generated successfully")
+Verification
+Step 1: Test Alert System
+Open two terminal windows.
+
+Terminal 1 - Start Monitor:
+
+cd ~/incident-alerting
+python3 integrated_system.py
+Terminal 2 - Generate Test Logs:
+
+cd ~/incident-alerting
+python3 generate_test_logs.py
+Step 2: Verify Alerts
+Check console output in Terminal 1 for alerts. You should see:
+
+Alert for "Failed Login Attempt" after 3 occurrences
+Alert for "Root Access" after 1 occurrence
+Alert for "Port Scan Detected" after 1 occurrence
+Step 3: Check Alert Log
+cat alerts/incidents.log
+Expected output should contain formatted alerts with timestamps, severity levels, and incident details.
+
+Step 4: Manual Testing
+Add custom log entries:
+
+echo "$(date '+%Y-%m-%d %H:%M:%S') sshd[9999]: Failed password for root from 1.2.3.4" >> logs/security.log
+Verify the monitor detects and alerts on the new entry.
+
+Troubleshooting Tips
+Monitor not detecting logs:
+
+Ensure log file exists: ls -l logs/security.log
+Check file permissions: chmod 644 logs/security.log
+Verify YAML syntax: python3 -c "import yaml; yaml.safe_load(open('config/alert_config.yaml'))"
+Alerts not appearing:
+
+Check notification settings in config file
+Verify alerts directory exists: mkdir -p alerts
+Test formatter independently: python3 alert_formatter.py
+Pattern not matching:
+
+Test regex patterns: python3 -c "import re; print(re.search('Failed password', 'test Failed password log'))"
+Check case sensitivity in patterns
+Review log format matches expected patterns
+Conclusion
+You have successfully created an automated incident alerting service that:
+
+Monitors security logs in real-time for suspicious patterns
+Detects incidents based on configurable rules and thresholds
+Formats alerts with relevant incident information
+Sends notifications through multiple channels (console and log file)
+This system demonstrates fundamental SIEM concepts used in Security Operations Centers (SOCs) worldwide. In production environments, similar systems integrate with email, SMS, Slack, or ticketing systems like Jira. You can extend this lab by adding email notifications using Python's smtplib, integrating with webhook services, or creating a web dashboard to visualize incidents.
+
+Key Skills Acquired:
+
+Real-time log monitoring and analysis
+Pattern-based incident detection
+Alert threshold management
+Multi-channel notification systems
+Security automation fundamentals
