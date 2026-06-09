@@ -1,0 +1,386 @@
+Secure Configuration Using Environment Variables
+Prerequisites
+Basic understanding of Linux command line
+Familiarity with Python basics (variables, functions)
+Text editor knowledge (nano, vim, or vi)
+Completed previous labs on Python scripting
+Learning Objectives
+By the end of this lab, you will be able to:
+
+Understand why hardcoding credentials is a security risk
+Create and manage .env files for configuration
+Use python-dotenv library to load environment variables
+Implement secure credential management in Python scripts
+Test and verify secure configuration practices
+Environment Setup
+Click the Start Lab button to provision your Linux machine. Once connected via SSH, you'll install all necessary tools.
+
+Install Required Software
+# Update package manager
+sudo apt update
+
+# Install Python3 and pip if not already installed
+sudo apt install python3 python3-pip -y
+
+# Verify installation
+python3 --version
+pip3 --version
+Task 1: Understanding the Security Problem
+Step 1: Create an Insecure Script
+First, let's see why hardcoding credentials is dangerous.
+
+# Create a project directory
+mkdir ~/secure-config-lab
+cd ~/secure-config-lab
+
+# Create an insecure script
+nano insecure_db.py
+Add the following code:
+
+#!/usr/bin/env python3
+"""
+Insecure database connection example - DO NOT USE IN PRODUCTION
+This demonstrates the security risk of hardcoding credentials
+"""
+
+def connect_to_database():
+    """
+    Connects to database using hardcoded credentials (INSECURE!)
+    """
+    # Hardcoded credentials - SECURITY RISK!
+    db_host = "localhost"
+    db_port = "5432"
+    db_name = "myapp_db"
+    db_user = "admin"
+    db_password = "SuperSecret123!"  # Exposed in code!
+    
+    # Simulate connection string
+    connection_string = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+    
+    print("Attempting database connection...")
+    print(f"Connection String: {connection_string}")
+    print("\nWARNING: Credentials are hardcoded and visible in source code!")
+    
+    return connection_string
+
+if __name__ == "__main__":
+    connect_to_database()
+Save and exit (Ctrl+X, then Y, then Enter).
+
+Step 2: Run the Insecure Script
+# Make it executable
+chmod +x insecure_db.py
+
+# Run the script
+python3 insecure_db.py
+Observe: The password is visible in the code and output. Anyone with access to this file can see the credentials.
+
+Task 2: Implementing Secure Configuration
+Step 1: Install python-dotenv
+# Install the python-dotenv library
+pip3 install python-dotenv
+Step 2: Create a .env File
+The .env file stores sensitive configuration outside your code.
+
+# Create the .env file
+nano .env
+Add the following configuration:
+
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=myapp_db
+DB_USER=admin
+DB_PASSWORD=SuperSecret123!
+
+# Application Settings
+APP_ENV=development
+DEBUG_MODE=true
+Save and exit.
+
+Step 3: Secure the .env File
+# Restrict file permissions (owner read/write only)
+chmod 600 .env
+
+# Verify permissions
+ls -la .env
+You should see: -rw------- (only owner can read/write)
+
+Step 4: Create .gitignore File
+Prevent accidentally committing secrets to version control.
+
+# Create .gitignore
+nano .gitignore
+Add:
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+Save and exit.
+
+Step 5: Create Secure Script
+Now create a script that loads credentials from environment variables.
+
+nano secure_db.py
+Add the following code:
+
+#!/usr/bin/env python3
+"""
+Secure database connection using environment variables
+"""
+
+import os
+from dotenv import load_dotenv
+
+def load_configuration():
+    """
+    Load configuration from .env file
+    
+    Returns:
+        bool: True if .env file loaded successfully
+    """
+    # Load environment variables from .env file
+    load_dotenv()
+    
+    # Verify critical variables are loaded
+    required_vars = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME']
+    
+    for var in required_vars:
+        if not os.getenv(var):
+            print(f"ERROR: Required variable {var} not found!")
+            return False
+    
+    print("Configuration loaded successfully from .env file")
+    return True
+
+def connect_to_database():
+    """
+    Connects to database using environment variables (SECURE)
+    """
+    # Retrieve credentials from environment variables
+    db_host = os.getenv('DB_HOST')
+    db_port = os.getenv('DB_PORT', '5432')  # Default port if not specified
+    db_name = os.getenv('DB_NAME')
+    db_user = os.getenv('DB_USER')
+    db_password = os.getenv('DB_PASSWORD')
+    
+    # Create connection string
+    # Note: In production, use proper database libraries with connection pooling
+    connection_string = f"postgresql://{db_user}:{'*' * len(db_password)}@{db_host}:{db_port}/{db_name}"
+    
+    print("\nDatabase Connection Details:")
+    print(f"Host: {db_host}")
+    print(f"Port: {db_port}")
+    print(f"Database: {db_name}")
+    print(f"User: {db_user}")
+    print(f"Password: {'*' * len(db_password)} (hidden)")
+    print(f"\nConnection String: {connection_string}")
+    print("\nSUCCESS: Credentials loaded securely from environment!")
+    
+    return True
+
+def display_app_settings():
+    """
+    Display non-sensitive application settings
+    """
+    app_env = os.getenv('APP_ENV', 'production')
+    debug_mode = os.getenv('DEBUG_MODE', 'false')
+    
+    print("\nApplication Settings:")
+    print(f"Environment: {app_env}")
+    print(f"Debug Mode: {debug_mode}")
+
+if __name__ == "__main__":
+    print("=== Secure Configuration Demo ===\n")
+    
+    # Load configuration
+    if load_configuration():
+        # Connect to database
+        connect_to_database()
+        
+        # Display app settings
+        display_app_settings()
+    else:
+        print("Failed to load configuration. Exiting.")
+        exit(1)
+Save and exit.
+
+Step 6: Run the Secure Script
+# Make it executable
+chmod +x secure_db.py
+
+# Run the script
+python3 secure_db.py
+Expected Output: You should see the configuration loaded with the password masked.
+
+Task 3: Testing Different Scenarios
+Step 1: Test Without .env File
+# Rename .env temporarily
+mv .env .env.backup
+
+# Run the script
+python3 secure_db.py
+
+# Restore .env
+mv .env.backup .env
+Observe: The script should report missing variables.
+
+Step 2: Test with Modified Values
+# Edit .env to change a value
+nano .env
+Change DB_NAME=myapp_db to DB_NAME=production_db, save and exit.
+
+# Run script again
+python3 secure_db.py
+Observe: The new database name is used without changing code.
+
+Step 3: Create a Configuration Checker Script
+nano check_config.py
+Add this utility script:
+
+#!/usr/bin/env python3
+"""
+Configuration checker utility
+"""
+
+import os
+from dotenv import load_dotenv
+
+def check_environment():
+    """
+    Check and display all environment variables from .env
+    """
+    load_dotenv()
+    
+    print("=== Environment Configuration Check ===\n")
+    
+    # Define expected variables
+    config_vars = {
+        'DB_HOST': 'Database Host',
+        'DB_PORT': 'Database Port',
+        'DB_NAME': 'Database Name',
+        'DB_USER': 'Database User',
+        'DB_PASSWORD': 'Database Password',
+        'APP_ENV': 'Application Environment',
+        'DEBUG_MODE': 'Debug Mode'
+    }
+    
+    print("Configuration Status:\n")
+    
+    for var, description in config_vars.items():
+        value = os.getenv(var)
+        if value:
+            # Mask sensitive values
+            if 'PASSWORD' in var or 'SECRET' in var:
+                display_value = '*' * len(value)
+            else:
+                display_value = value
+            print(f"✓ {description:25} ({var}): {display_value}")
+        else:
+            print(f"✗ {description:25} ({var}): NOT SET")
+    
+    print("\n" + "="*50)
+
+if __name__ == "__main__":
+    check_environment()
+Save and exit.
+
+# Run the checker
+python3 check_config.py
+Verification
+Verify Secure Implementation
+Run through this checklist:
+
+# 1. Check .env file permissions
+ls -la .env
+# Should show: -rw------- (600 permissions)
+
+# 2. Verify .gitignore exists
+cat .gitignore | grep .env
+# Should show .env entries
+
+# 3. Run secure script successfully
+python3 secure_db.py
+# Should display masked password
+
+# 4. Verify configuration checker
+python3 check_config.py
+# Should show all variables with sensitive ones masked
+
+# 5. Check that credentials aren't in Python code
+grep -i "password.*=" secure_db.py | grep -v "getenv"
+# Should return no hardcoded passwords
+Security Verification
+# Verify no credentials in version control
+echo "Checking for exposed credentials..."
+
+# This would catch hardcoded passwords
+grep -r "SuperSecret" *.py
+# Should only find it in insecure_db.py (our example of what NOT to do)
+Troubleshooting Tips
+Issue: "ModuleNotFoundError: No module named 'dotenv'"
+Solution:
+
+pip3 install python-dotenv --user
+Issue: Environment variables not loading
+Solution:
+
+# Check .env file exists in the same directory
+ls -la .env
+
+# Verify .env file format (no spaces around =)
+cat .env
+
+# Ensure load_dotenv() is called before accessing variables
+Issue: Permission denied on .env file
+Solution:
+
+# Fix permissions
+chmod 600 .env
+
+# Verify ownership
+ls -la .env
+Issue: Variables showing as None
+Solution:
+
+# Add debug output in your script
+print(f"Current directory: {os.getcwd()}")
+print(f".env exists: {os.path.exists('.env')}")
+Conclusion
+What You Accomplished
+In this lab, you successfully:
+
+Identified security risks of hardcoded credentials
+Created and secured .env files with proper permissions
+Implemented python-dotenv for configuration management
+Built scripts that load credentials securely from environment variables
+Created utilities to verify and check configuration
+Established best practices for preventing credential exposure
+Key Takeaways
+Never hardcode credentials in source code
+Use environment variables for sensitive configuration
+Protect .env files with proper permissions (600)
+Exclude .env from version control using .gitignore
+Validate configuration before using it in applications
+Real-World Applications
+This secure configuration pattern is used in:
+
+Web applications (Django, Flask, Node.js)
+Microservices and containerized applications
+CI/CD pipelines
+Cloud deployments
+Database connection management
+Next Steps
+To further enhance your skills:
+
+Explore secret management tools (HashiCorp Vault, AWS Secrets Manager alternatives)
+Learn about configuration management in different environments (dev, staging, production)
+Practice rotating credentials regularly
+Implement encrypted configuration files for additional security
+Remember: Security is not optional. Always protect sensitive information and follow the principle of least privilege.
