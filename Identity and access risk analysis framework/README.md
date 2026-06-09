@@ -2,6 +2,16 @@
 
 > *A hands-on cybersecurity lab focused on Identity and Access Management (IAM) risk assessment, user behavior analytics, permission correlation, and risk scoring automation using Python.*
 
+
+![Python](https://img.shields.io/badge/Python-3.x-blue?style=for-the-badge\&logo=python)
+
+![Linux](https://img.shields.io/badge/Linux-Ubuntu-orange?style=for-the-badge\&logo=linux)
+
+![JSON](https://img.shields.io/badge/JSON-Data-green?style=for-the-badge\&logo=json)
+
+![Pandas](https://img.shields.io/badge/Pandas-Analysis-purple?style=for-the-badge\&logo=pandas)
+
+![Cybersecurity](https://img.shields.io/badge/Cybersecurity-IAM-red?style=for-the-badge)
 ---
 
 ## 📌 Overview
@@ -38,21 +48,7 @@ By completing this project, you will:
 
 ✅ Generate actionable IAM security reports
 
----
 
-# 🛠️ Technologies Used
-
-![Python](https://img.shields.io/badge/Python-3.x-blue?style=for-the-badge\&logo=python)
-
-![Linux](https://img.shields.io/badge/Linux-Ubuntu-orange?style=for-the-badge\&logo=linux)
-
-![JSON](https://img.shields.io/badge/JSON-Data-green?style=for-the-badge\&logo=json)
-
-![Pandas](https://img.shields.io/badge/Pandas-Analysis-purple?style=for-the-badge\&logo=pandas)
-
-![Cybersecurity](https://img.shields.io/badge/Cybersecurity-IAM-red?style=for-the-badge)
-
----
 
 # 📂 Project Structure
 
