@@ -1,0 +1,425 @@
+Linux Command Line Operations
+Prerequisites
+Basic understanding of operating systems and file systems
+Familiarity with terminal/command line interfaces
+Ability to read and understand file paths
+Basic text editing skills (nano or vim)
+Learning Objectives
+By completing this lab, you will:
+
+Navigate the Linux filesystem efficiently using CLI commands
+Manage files, directories, and permissions
+Process text data using grep, awk, and sed
+Monitor system processes and resource usage
+Implement input/output redirection and piping
+Environment Setup
+Click the Start Lab button to provision your Linux machine
+Connect to your Linux environment via SSH or terminal
+Verify your environment:
+# Check your shell
+echo $SHELL
+
+# Verify current directory
+pwd
+
+# Check available disk space
+df -h
+All tools (grep, awk, sed) are pre-installed on standard Linux distributions.
+
+Task 1: Filesystem Navigation and File Management
+Step 1: Create a Working Directory Structure
+# Create project directory
+mkdir -p ~/data_engineering_lab/{raw_data,processed_data,logs,scripts}
+
+# Navigate to the project directory
+cd ~/data_engineering_lab
+
+# Verify structure
+tree . || ls -R
+Step 2: Create Sample Data Files
+# Create a sample log file
+cat > logs/application.log << 'EOF'
+2024-01-15 08:23:45 INFO User login successful: user_id=1001
+2024-01-15 08:24:12 ERROR Database connection failed: timeout
+2024-01-15 08:25:33 INFO Data processing started: batch_id=2024011501
+2024-01-15 08:26:01 WARN Memory usage high: 85%
+2024-01-15 08:27:15 ERROR File not found: /data/input.csv
+2024-01-15 08:28:42 INFO Data processing completed: records=15000
+2024-01-15 08:29:10 INFO User logout: user_id=1001
+2024-01-15 08:30:05 ERROR API request failed: status=500
+EOF
+
+# Create a sample CSV data file
+cat > raw_data/sales_data.csv << 'EOF'
+date,product,quantity,price,region
+2024-01-01,Widget-A,150,29.99,North
+2024-01-01,Widget-B,200,19.99,South
+2024-01-02,Widget-A,175,29.99,East
+2024-01-02,Widget-C,100,39.99,West
+2024-01-03,Widget-B,225,19.99,North
+2024-01-03,Widget-A,160,29.99,South
+2024-01-04,Widget-C,90,39.99,East
+EOF
+
+# Create a configuration file
+cat > scripts/config.txt << 'EOF'
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_NAME=analytics_db
+MAX_CONNECTIONS=100
+TIMEOUT=30
+LOG_LEVEL=INFO
+BACKUP_ENABLED=true
+EOF
+Step 3: Practice Navigation Commands
+# List files with details
+ls -lah raw_data/
+
+# Find files by name pattern
+find . -name "*.csv"
+
+# Find files modified in last 10 minutes
+find . -type f -mmin -10
+
+# Display directory tree (if tree is installed)
+# TODO: Navigate to different directories and practice using:
+# - cd (change directory)
+# - pwd (print working directory)
+# - ls with various flags (-l, -a, -h, -t, -r)
+Step 4: File Permissions Management
+# View current permissions
+ls -l scripts/config.txt
+
+# TODO: Modify permissions to make config.txt readable only by owner
+# Hint: Use chmod with octal notation (e.g., 600)
+chmod ___ scripts/config.txt
+
+# Create a script file
+cat > scripts/process_data.sh << 'EOF'
+#!/bin/bash
+echo "Processing data..."
+date
+EOF
+
+# TODO: Make the script executable
+# Hint: Add execute permission using chmod +x
+chmod ___ scripts/process_data.sh
+
+# Verify permissions changed
+ls -l scripts/
+Task 2: Text Processing with grep, awk, and sed
+Step 1: Using grep for Pattern Matching
+# Search for ERROR entries in logs
+grep "ERROR" logs/application.log
+
+# TODO: Search for ERROR entries and show line numbers
+# Hint: Use the -n flag
+grep ___ "ERROR" logs/application.log
+
+# TODO: Count how many INFO messages exist
+# Hint: Use the -c flag
+grep ___ "INFO" logs/application.log
+
+# Case-insensitive search for "user"
+grep -i "user" logs/application.log
+
+# TODO: Search for lines that DON'T contain "INFO"
+# Hint: Use the -v flag for inverse matching
+grep ___ "INFO" logs/application.log
+
+# Search with context (show 2 lines before and after)
+grep -C 2 "Database connection failed" logs/application.log
+Step 2: Using awk for Data Extraction
+# Print specific columns from CSV
+awk -F',' '{print $2, $3}' raw_data/sales_data.csv
+
+# TODO: Calculate total quantity sold
+# Hint: Sum the 3rd column, skip header with NR>1
+awk -F',' '___ {sum += $3} END {print "Total Quantity:", sum}' raw_data/sales_data.csv
+
+# TODO: Print products where quantity > 150
+# Hint: Use conditional statement with $3
+awk -F',' 'NR>1 && ___ {print $2, $3}' raw_data/sales_data.csv
+
+# Extract configuration values
+awk -F'=' '{print $1 ": " $2}' scripts/config.txt
+
+# TODO: Calculate average price from sales data
+# Hint: Sum $4 column and divide by count in END block
+awk -F',' '___' raw_data/sales_data.csv
+Step 3: Using sed for Text Transformation
+# Replace first occurrence of INFO with INFORMATION
+sed 's/INFO/INFORMATION/' logs/application.log
+
+# TODO: Replace ALL occurrences of INFO with INFORMATION
+# Hint: Add 'g' flag to substitute command
+sed 's/INFO/INFORMATION/___' logs/application.log
+
+# TODO: Delete all lines containing "User"
+# Hint: Use /pattern/d syntax
+sed '/___/d' logs/application.log
+
+# Extract lines 3-5 from the log file
+sed -n '3,5p' logs/application.log
+
+# TODO: Replace "localhost" with "192.168.1.100" in config file
+# Create a modified version in processed_data/
+sed 's/___/___/' scripts/config.txt > processed_data/config_modified.txt
+
+# In-place editing (backup with .bak extension)
+sed -i.bak 's/TIMEOUT=30/TIMEOUT=60/' processed_data/config_modified.txt
+Step 4: Combining Commands with Pipes
+# TODO: Find all ERROR messages and count them
+grep "ERROR" logs/application.log | ___
+
+# TODO: Extract product names and sort them uniquely
+# Hint: Use awk to get column 2, then sort -u
+awk -F',' 'NR>1 {print $2}' raw_data/sales_data.csv | ___ | ___
+
+# Complex pipeline: Find errors, extract timestamps, sort
+grep "ERROR" logs/application.log | awk '{print $1, $2}' | sort
+
+# TODO: Create a pipeline that:
+# 1. Finds all lines with "Widget-A"
+# 2. Extracts quantity (column 3)
+# 3. Calculates the sum
+grep "Widget-A" raw_data/sales_data.csv | ___ | ___
+Task 3: Process Monitoring and Management
+Step 1: View Running Processes
+# Display current processes
+ps aux | head -20
+
+# TODO: Find processes containing "bash"
+# Hint: Pipe ps output to grep
+ps aux | grep ___
+
+# Display process tree
+pstree -p | head -20
+
+# Show processes for current user
+ps -u $USER
+
+# TODO: Display top 10 memory-consuming processes
+# Hint: Use ps with custom format and sort
+ps aux --sort=-___ | head -11
+Step 2: Monitor System Resources
+# Check memory usage
+free -h
+
+# Check disk usage
+df -h
+
+# TODO: Check disk usage of current directory and subdirectories
+# Hint: Use du with -h flag and limit depth
+du -h --max-depth=___
+
+# Monitor system in real-time (press 'q' to quit)
+# top
+# Note: Run top interactively, then exit
+
+# TODO: Display CPU and memory info
+lscpu | grep -E "Model name|CPU\(s\):"
+cat /proc/meminfo | grep MemTotal
+Step 3: Background Processes and Job Control
+# Create a long-running script
+cat > scripts/long_task.sh << 'EOF'
+#!/bin/bash
+for i in {1..30}; do
+    echo "Processing iteration $i"
+    sleep 2
+done
+echo "Task completed"
+EOF
+
+chmod +x scripts/long_task.sh
+
+# TODO: Run the script in the background
+# Hint: Use & at the end
+./scripts/long_task.sh ___
+
+# List background jobs
+jobs
+
+# TODO: Bring job to foreground (if running in background)
+# Hint: Use fg command
+# fg %1
+
+# TODO: Create a script that runs, suspend it (Ctrl+Z), then resume in background
+# Hint: After Ctrl+Z, use bg command
+# bg %1
+
+# Kill a background job
+# kill %1
+Task 4: Input/Output Redirection
+Step 1: Standard Output Redirection
+# Redirect output to file (overwrite)
+ls -la > processed_data/directory_listing.txt
+
+# TODO: Append output to file
+# Hint: Use >> instead of >
+date ___ processed_data/directory_listing.txt
+
+# Verify the file
+cat processed_data/directory_listing.txt
+
+# TODO: Redirect both stdout and stderr to same file
+# Hint: Use &> or 2>&1
+find /root -name "*.txt" ___ processed_data/find_results.txt 2>&1
+Step 2: Standard Input Redirection
+# Count lines in a file using input redirection
+wc -l < raw_data/sales_data.csv
+
+# TODO: Sort the sales data and save to processed_data
+# Hint: Use < for input and > for output
+sort < raw_data/sales_data.csv ___ processed_data/sales_sorted.csv
+
+# Use here document to create a file
+cat > processed_data/summary.txt << 'EOF'
+Data Engineering Lab Summary
+============================
+Total files processed: TBD
+Total errors found: TBD
+EOF
+Step 3: Advanced Redirection and Piping
+# TODO: Create a pipeline that processes logs and saves results
+# Extract ERROR lines, count them, and save to file
+grep "ERROR" logs/application.log | wc -l > processed_data/error_count.txt
+
+# TODO: Create a comprehensive report using multiple redirections
+# Hint: Combine multiple commands with >> to append
+{
+    echo "=== System Report ==="
+    echo "Generated on: $(date)"
+    echo ""
+    echo "=== Disk Usage ==="
+    df -h
+    echo ""
+    echo "=== Error Summary ==="
+    grep -c "ERROR" logs/application.log
+    echo ""
+    echo "=== Top Products ==="
+    awk -F',' 'NR>1 {print $2}' raw_data/sales_data.csv | sort | uniq -c
+} > processed_data/system_report.txt
+
+# View the report
+cat processed_data/system_report.txt
+Step 4: Practical Data Pipeline
+# TODO: Create a complete data processing pipeline script
+cat > scripts/data_pipeline.sh << 'EOF'
+#!/bin/bash
+
+# TODO: Complete this data pipeline script
+# 1. Extract all sales for Widget-A
+# 2. Calculate total quantity and revenue
+# 3. Save results to processed_data/widget_a_summary.txt
+
+echo "Processing Widget-A sales data..."
+
+# Extract Widget-A sales
+grep "___" raw_data/sales_data.csv > processed_data/widget_a_sales.csv
+
+# Calculate totals using awk
+awk -F',' '
+    NR>1 {
+        # TODO: Sum quantity (column 3) and calculate revenue (quantity * price)
+        qty += $___
+        revenue += $___ * $___
+    }
+    END {
+        print "Total Quantity: " qty
+        print "Total Revenue: $" revenue
+    }
+' processed_data/widget_a_sales.csv > processed_data/widget_a_summary.txt
+
+echo "Pipeline completed. Results saved."
+cat processed_data/widget_a_summary.txt
+EOF
+
+chmod +x scripts/data_pipeline.sh
+
+# TODO: Execute the pipeline
+./scripts/data_pipeline.sh
+Verification
+Verify Task 1: Filesystem and Permissions
+# Check directory structure exists
+ls -R ~/data_engineering_lab
+
+# Verify permissions on config file (should be 600 or similar)
+ls -l scripts/config.txt
+
+# Verify script is executable
+ls -l scripts/process_data.sh | grep "x"
+Verify Task 2: Text Processing
+# Verify grep found errors
+grep -c "ERROR" logs/application.log
+# Expected: 3
+
+# Verify awk calculated total quantity
+awk -F',' 'NR>1 {sum += $3} END {print sum}' raw_data/sales_data.csv
+# Expected: 1100
+
+# Verify sed created modified config
+test -f processed_data/config_modified.txt && echo "Config file created"
+Verify Task 3: Process Monitoring
+# Verify you can list processes
+ps aux | wc -l
+# Should show number > 0
+
+# Verify disk usage command works
+du -sh ~/data_engineering_lab
+Verify Task 4: Redirection
+# Verify output files were created
+ls -lh processed_data/
+
+# Check error count file
+cat processed_data/error_count.txt
+# Expected: 3
+
+# Verify system report exists and has content
+wc -l processed_data/system_report.txt
+# Should have multiple lines
+
+# Verify data pipeline results
+test -f processed_data/widget_a_summary.txt && cat processed_data/widget_a_summary.txt
+Troubleshooting Tips
+Permission Denied Errors:
+
+Check file permissions with ls -l
+Ensure scripts have execute permission: chmod +x script.sh
+Verify you're in the correct directory: pwd
+Command Not Found:
+
+Verify the command is installed: which command_name
+Check your PATH: echo $PATH
+For tree command: sudo apt-get install tree (if needed)
+Grep/Awk/Sed Not Working as Expected:
+
+Check delimiter in awk: -F',' for CSV files
+Verify regex patterns are properly quoted
+Use -n with sed when using p command
+Test patterns on small samples first
+File Not Found:
+
+Use absolute paths or verify current directory
+Check file names for typos: ls -la
+Verify file was created: test -f filename && echo "exists"
+Pipeline Errors:
+
+Test each command separately before piping
+Check for proper quoting in complex commands
+Verify input/output redirections don't conflict
+Conclusion
+You have successfully completed the Linux Command Line Operations lab. You've gained practical experience with:
+
+Filesystem Navigation: Created directory structures, managed files, and set appropriate permissions
+Text Processing: Used grep for pattern matching, awk for data extraction and calculation, and sed for text transformation
+Process Management: Monitored system resources, managed background jobs, and understood process control
+I/O Redirection: Implemented output redirection, piping, and created data processing pipelines
+These command-line skills are fundamental for data engineering workflows, enabling you to automate tasks, process large datasets, and manage Linux-based data infrastructure efficiently. The ability to chain commands together with pipes and redirections allows you to build powerful data processing pipelines directly from the command line.
+
+Next Steps:
+
+Practice combining these commands in more complex scripts
+Explore advanced awk programming for data transformation
+Learn shell scripting to automate repetitive tasks
+Study cron jobs for scheduling automated data pipelines
