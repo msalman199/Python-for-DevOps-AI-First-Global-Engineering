@@ -1,0 +1,387 @@
+ Secure Evidence Collection and Reporting System
+Prerequisites
+Basic Linux command line knowledge
+Understanding of file permissions and ownership
+Familiarity with text editors (nano or vi)
+Basic understanding of hash functions and checksums
+Learning Objectives
+By completing this lab, you will:
+
+Understand end-to-end forensic evidence collection workflow
+Learn to preserve evidence integrity using cryptographic hashing
+Create structured forensic reports with chain of custody
+Implement secure evidence handling procedures
+Environment Setup
+System Requirements
+Linux machine (provided via "Start Lab" button)
+Root or sudo access
+Minimum 2GB free disk space
+Install Required Tools
+# Update package manager
+sudo apt update
+
+# Install forensic and reporting tools
+sudo apt install -y dcfldd md5deep python3 python3-pip tree
+
+# Verify installations
+dcfldd --version
+md5deep -v
+python3 --version
+Task 1: Create Evidence Collection Framework
+Step 1: Set Up Evidence Directory Structure
+# Create main evidence directory
+mkdir -p ~/forensics_lab
+cd ~/forensics_lab
+
+# Create organized subdirectories
+mkdir -p evidence/{original,working,reports}
+mkdir -p evidence/logs
+mkdir -p evidence/hashes
+
+# Set proper permissions (read-only for original evidence)
+chmod 755 evidence
+chmod 700 evidence/original
+chmod 755 evidence/working
+chmod 755 evidence/reports
+Step 2: Create Sample Evidence Files
+For this lab, we'll simulate evidence collection with sample files:
+
+# Create simulated evidence files
+cd ~/forensics_lab
+
+# Simulate a suspicious document
+echo "Confidential Project Data - Access Log" > suspicious_doc.txt
+echo "User: jdoe - Access Time: 2024-01-15 14:23:45" >> suspicious_doc.txt
+echo "Action: Downloaded sensitive files" >> suspicious_doc.txt
+
+# Simulate a log file
+cat > system.log << 'EOF'
+2024-01-15 14:20:12 LOGIN jdoe from 192.168.1.105
+2024-01-15 14:23:45 FILE_ACCESS jdoe accessed /secure/data.db
+2024-01-15 14:24:01 FILE_DOWNLOAD jdoe downloaded data.db
+2024-01-15 14:25:33 LOGOUT jdoe
+EOF
+
+# Simulate a configuration file
+cat > app.conf << 'EOF'
+[database]
+host=192.168.1.50
+user=admin
+last_modified=2024-01-15
+EOF
+Step 3: Collect Evidence with Integrity Preservation
+# Copy evidence to original directory with verification
+cd ~/forensics_lab
+
+# Use dcfldd for forensically sound copying
+dcfldd if=suspicious_doc.txt of=evidence/original/suspicious_doc.txt hash=md5,sha256 hashlog=evidence/hashes/suspicious_doc.hash
+
+dcfldd if=system.log of=evidence/original/system.log hash=md5,sha256 hashlog=evidence/hashes/system.log.hash
+
+dcfldd if=app.conf of=evidence/original/app.conf hash=md5,sha256 hashlog=evidence/hashes/app.conf.hash
+
+# Make original evidence read-only
+chmod 444 evidence/original/*
+
+# Create working copies
+cp -p evidence/original/* evidence/working/
+Step 4: Generate Hash Manifest
+# Create comprehensive hash manifest
+cd ~/forensics_lab/evidence/original
+
+# Generate MD5 hashes
+md5deep -r . > ../hashes/md5_manifest.txt
+
+# Generate SHA256 hashes
+sha256sum * > ../hashes/sha256_manifest.txt
+
+# Display hash manifest
+echo "=== Hash Manifest ==="
+cat ../hashes/sha256_manifest.txt
+Step 5: Create Chain of Custody Log
+# Create chain of custody template
+cat > ~/forensics_lab/evidence/logs/chain_of_custody.log << 'EOF'
+CHAIN OF CUSTODY LOG
+=====================
+Case ID: CASE-2024-001
+Evidence Collection Date: $(date)
+Collected By: Lab Student
+Location: Forensics Lab Environment
+
+EVIDENCE ITEMS:
+---------------
+EOF
+
+# Add evidence items with timestamps
+cd ~/forensics_lab/evidence/original
+for file in *; do
+    echo "Item: $file" >> ../logs/chain_of_custody.log
+    echo "  Collected: $(date)" >> ../logs/chain_of_custody.log
+    echo "  Size: $(stat -f%z "$file" 2>/dev/null || stat -c%s "$file")" >> ../logs/chain_of_custody.log
+    echo "  SHA256: $(sha256sum "$file" | awk '{print $1}')" >> ../logs/chain_of_custody.log
+    echo "" >> ../logs/chain_of_custody.log
+done
+
+# Display chain of custody
+cat ../logs/chain_of_custody.log
+Task 2: Evidence Analysis and Report Generation
+Step 1: Create Python Report Generator
+Create a Python script for automated report generation:
+
+nano ~/forensics_lab/generate_report.py
+Add the following code:
+
+#!/usr/bin/env python3
+"""
+Forensic Evidence Report Generator
+Generates structured reports from collected evidence
+"""
+
+import os
+import hashlib
+import datetime
+from pathlib import Path
+
+class ForensicReporter:
+    def __init__(self, evidence_dir):
+        """
+        Initialize the forensic reporter
+        
+        Args:
+            evidence_dir: Path to evidence directory
+        """
+        self.evidence_dir = Path(evidence_dir)
+        self.report_data = []
+        
+    def calculate_hash(self, filepath, algorithm='sha256'):
+        """
+        Calculate hash of a file
+        
+        Args:
+            filepath: Path to file
+            algorithm: Hash algorithm (md5, sha256)
+        
+        Returns:
+            Hexadecimal hash string
+        """
+        # TODO: Open file in binary mode
+        # TODO: Read file and calculate hash
+        # TODO: Return hex digest
+        hash_obj = hashlib.new(algorithm)
+        with open(filepath, 'rb') as f:
+            hash_obj.update(f.read())
+        return hash_obj.hexdigest()
+    
+    def analyze_evidence(self):
+        """
+        Analyze all evidence files and collect metadata
+        """
+        original_dir = self.evidence_dir / 'original'
+        
+        for filepath in original_dir.iterdir():
+            if filepath.is_file():
+                # TODO: Collect file metadata
+                # TODO: Calculate hashes
+                # TODO: Store in report_data
+                file_info = {
+                    'filename': filepath.name,
+                    'size': filepath.stat().st_size,
+                    'modified': datetime.datetime.fromtimestamp(
+                        filepath.stat().st_mtime
+                    ).strftime('%Y-%m-%d %H:%M:%S'),
+                    'md5': self.calculate_hash(filepath, 'md5'),
+                    'sha256': self.calculate_hash(filepath, 'sha256')
+                }
+                self.report_data.append(file_info)
+    
+    def generate_report(self, output_file):
+        """
+        Generate formatted forensic report
+        
+        Args:
+            output_file: Path to output report file
+        """
+        # TODO: Create report header
+        # TODO: Add evidence details
+        # TODO: Write to file
+        
+        with open(output_file, 'w') as f:
+            f.write("=" * 70 + "\n")
+            f.write("FORENSIC EVIDENCE REPORT\n")
+            f.write("=" * 70 + "\n\n")
+            f.write(f"Report Generated: {datetime.datetime.now()}\n")
+            f.write(f"Case ID: CASE-2024-001\n")
+            f.write(f"Total Evidence Items: {len(self.report_data)}\n\n")
+            
+            f.write("-" * 70 + "\n")
+            f.write("EVIDENCE INVENTORY\n")
+            f.write("-" * 70 + "\n\n")
+            
+            for idx, item in enumerate(self.report_data, 1):
+                f.write(f"[{idx}] {item['filename']}\n")
+                f.write(f"    Size: {item['size']} bytes\n")
+                f.write(f"    Modified: {item['modified']}\n")
+                f.write(f"    MD5: {item['md5']}\n")
+                f.write(f"    SHA256: {item['sha256']}\n\n")
+            
+            f.write("-" * 70 + "\n")
+            f.write("INTEGRITY VERIFICATION\n")
+            f.write("-" * 70 + "\n")
+            f.write("All evidence items have been hashed and verified.\n")
+            f.write("Original evidence preserved in read-only state.\n\n")
+
+def main():
+    """Main execution function"""
+    # TODO: Initialize reporter
+    # TODO: Analyze evidence
+    # TODO: Generate report
+    
+    evidence_path = Path.home() / 'forensics_lab' / 'evidence'
+    report_path = evidence_path / 'reports' / 'forensic_report.txt'
+    
+    reporter = ForensicReporter(evidence_path)
+    reporter.analyze_evidence()
+    reporter.generate_report(report_path)
+    
+    print(f"Report generated: {report_path}")
+
+if __name__ == "__main__":
+    main()
+Save and exit (Ctrl+X, Y, Enter).
+
+Step 2: Execute Report Generation
+# Make script executable
+chmod +x ~/forensics_lab/generate_report.py
+
+# Run report generator
+cd ~/forensics_lab
+python3 generate_report.py
+
+# View generated report
+cat evidence/reports/forensic_report.txt
+Step 3: Create Evidence Summary
+# Generate evidence summary
+cat > ~/forensics_lab/evidence/reports/executive_summary.txt << 'EOF'
+EXECUTIVE SUMMARY
+=================
+
+Case Information:
+- Case ID: CASE-2024-001
+- Investigation Date: $(date +%Y-%m-%d)
+- Evidence Items Collected: 3
+
+Evidence Overview:
+1. suspicious_doc.txt - Document containing access logs
+2. system.log - System authentication and access logs
+3. app.conf - Application configuration file
+
+Integrity Status:
+- All evidence items hashed with MD5 and SHA256
+- Original evidence preserved in read-only state
+- Chain of custody documented
+- Working copies created for analysis
+
+Next Steps:
+- Detailed analysis of log files
+- Correlation of timestamps
+- User activity reconstruction
+EOF
+
+# Display summary
+cat ~/forensics_lab/evidence/reports/executive_summary.txt
+Step 4: Verify Evidence Integrity
+# Create verification script
+cat > ~/forensics_lab/verify_integrity.sh << 'EOF'
+#!/bin/bash
+
+echo "=== Evidence Integrity Verification ==="
+echo ""
+
+cd ~/forensics_lab/evidence/original
+
+# Verify against stored hashes
+echo "Verifying SHA256 hashes..."
+sha256sum -c ../hashes/sha256_manifest.txt
+
+echo ""
+echo "Verification complete!"
+echo ""
+
+# Check file permissions
+echo "Checking evidence protection..."
+ls -l
+EOF
+
+chmod +x ~/forensics_lab/verify_integrity.sh
+~/forensics_lab/verify_integrity.sh
+Verification
+Verify Lab Completion
+Run these commands to confirm successful completion:
+
+# Check directory structure
+echo "=== Directory Structure ==="
+tree ~/forensics_lab -L 2
+
+# Verify evidence files exist
+echo -e "\n=== Evidence Files ==="
+ls -lh ~/forensics_lab/evidence/original/
+
+# Verify hash files
+echo -e "\n=== Hash Files ==="
+ls -lh ~/forensics_lab/evidence/hashes/
+
+# Verify reports generated
+echo -e "\n=== Generated Reports ==="
+ls -lh ~/forensics_lab/evidence/reports/
+
+# Verify file permissions (original should be read-only)
+echo -e "\n=== Evidence Protection ==="
+stat -c "%A %n" ~/forensics_lab/evidence/original/*
+
+# Test integrity verification
+echo -e "\n=== Integrity Check ==="
+cd ~/forensics_lab/evidence/original
+sha256sum -c ../hashes/sha256_manifest.txt
+Expected Results
+Evidence directory structure created successfully
+Three evidence files collected and preserved
+Hash manifests generated (MD5 and SHA256)
+Chain of custody log created
+Forensic report generated with all evidence details
+Original evidence files are read-only (permissions: 444)
+Integrity verification passes for all files
+Troubleshooting
+Issue: dcfldd command not found
+
+Solution: Run sudo apt install -y dcfldd
+Issue: Permission denied when accessing evidence
+
+Solution: Check you're in the correct directory and have proper permissions
+Issue: Python script fails to run
+
+Solution: Ensure Python 3 is installed: python3 --version
+Issue: Hash verification fails
+
+Solution: Ensure you haven't modified original evidence files
+Issue: Report not generated
+
+Solution: Check Python script syntax and file paths
+Conclusion
+You have successfully completed a secure evidence collection and reporting workflow. You learned to:
+
+Create a structured evidence directory with proper organization
+Collect evidence using forensically sound methods (dcfldd)
+Preserve evidence integrity using cryptographic hashing (MD5, SHA256)
+Implement chain of custody documentation
+Generate automated forensic reports using Python
+Verify evidence integrity throughout the process
+This workflow represents fundamental practices used in digital forensics and incident response. The techniques you practiced—evidence preservation, hash verification, and documentation—are critical for maintaining evidence admissibility in legal proceedings and ensuring investigation integrity.
+
+Key Takeaways:
+
+Always preserve original evidence in read-only state
+Document chain of custody from collection to analysis
+Use multiple hash algorithms for verification
+Maintain organized directory structures
+Automate reporting to reduce human error
+These skills are essential for cybersecurity professionals working in incident response, digital forensics, and security operations roles.
