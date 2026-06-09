@@ -1,0 +1,464 @@
+ Identity and Access Risk Scoring System
+Prerequisites
+Basic Linux command line knowledge
+Understanding of user accounts and permissions
+Familiarity with Python basics
+Basic understanding of JSON format
+Learning Objectives
+By completing this lab, you will:
+
+Understand how to quantify IAM (Identity and Access Management) risks
+Learn to score users and roles based on behavior patterns
+Analyze permissions and detect anomalies
+Build a simple risk scoring system using open-source tools
+Environment Setup
+Step 1: Install Required Tools
+# Update package manager
+sudo apt update
+
+# Install Python and pip
+sudo apt install -y python3 python3-pip
+
+# Install required Python libraries
+pip3 install pandas numpy
+Step 2: Create Lab Directory
+# Create working directory
+mkdir -p ~/iam-risk-lab
+cd ~/iam-risk-lab
+Task 1: Generate Sample IAM Data
+Step 1.1: Create User Activity Data
+Create a Python script to generate sample user data:
+
+nano generate_data.py
+Add the following code:
+
+import json
+import random
+from datetime import datetime, timedelta
+
+def generate_user_data():
+    '''
+    Generate sample user activity and permission data for risk analysis.
+    '''
+    users = []
+    
+    # Define sample users with different risk profiles
+    user_profiles = [
+        {"username": "alice", "role": "admin", "department": "IT"},
+        {"username": "bob", "role": "developer", "department": "Engineering"},
+        {"username": "charlie", "role": "analyst", "department": "Finance"},
+        {"username": "david", "role": "user", "department": "HR"},
+        {"username": "eve", "role": "contractor", "department": "External"}
+    ]
+    
+    for profile in user_profiles:
+        user_data = {
+            "username": profile["username"],
+            "role": profile["role"],
+            "department": profile["department"],
+            "permissions": generate_permissions(profile["role"]),
+            "activity": generate_activity(profile["username"]),
+            "last_password_change": random.randint(1, 365)
+        }
+        users.append(user_data)
+    
+    return users
+
+def generate_permissions(role):
+    '''Generate permissions based on role'''
+    base_permissions = ["read", "write"]
+    
+    if role == "admin":
+        return base_permissions + ["delete", "admin", "sudo", "config_change"]
+    elif role == "developer":
+        return base_permissions + ["deploy", "database_access"]
+    elif role == "analyst":
+        return base_permissions + ["report_access"]
+    else:
+        return ["read"]
+
+def generate_activity(username):
+    '''Generate activity logs for a user'''
+    activities = []
+    
+    # Simulate different activity patterns
+    if username == "eve":  # Suspicious user
+        login_count = random.randint(50, 100)
+        failed_logins = random.randint(15, 30)
+        off_hours_access = random.randint(20, 40)
+    elif username == "alice":  # Admin with elevated access
+        login_count = random.randint(30, 50)
+        failed_logins = random.randint(0, 2)
+        off_hours_access = random.randint(5, 15)
+    else:  # Normal users
+        login_count = random.randint(20, 40)
+        failed_logins = random.randint(0, 5)
+        off_hours_access = random.randint(0, 5)
+    
+    return {
+        "login_count": login_count,
+        "failed_logins": failed_logins,
+        "off_hours_access": off_hours_access,
+        "data_downloads": random.randint(0, 50),
+        "privilege_escalation_attempts": random.randint(0, 3)
+    }
+
+# Generate and save data
+users = generate_user_data()
+with open('iam_data.json', 'w') as f:
+    json.dump(users, f, indent=2)
+
+print("Sample IAM data generated successfully!")
+print(f"Created data for {len(users)} users")
+Run the script:
+
+python3 generate_data.py
+Step 1.2: View Generated Data
+cat iam_data.json
+Task 2: Build Risk Scoring System
+Step 2.1: Create Risk Scoring Engine
+Create the main risk scoring script:
+
+nano risk_scorer.py
+Add the following code with TODO sections for students:
+
+import json
+import pandas as pd
+
+class IAMRiskScorer:
+    '''
+    Identity and Access Management Risk Scoring System
+    Analyzes user behavior, permissions, and anomalies to calculate risk scores
+    '''
+    
+    def __init__(self, data_file):
+        '''Initialize the risk scorer with user data'''
+        with open(data_file, 'r') as f:
+            self.users = json.load(f)
+        self.risk_scores = []
+    
+    def calculate_permission_risk(self, permissions):
+        '''
+        Calculate risk score based on permissions granted
+        
+        Args:
+            permissions: List of permission strings
+        
+        Returns:
+            Integer risk score (0-30)
+        '''
+        # TODO: Implement permission risk calculation
+        # High-risk permissions: admin, sudo, config_change, delete
+        # Medium-risk: deploy, database_access
+        # Low-risk: read, write, report_access
+        
+        risk_score = 0
+        high_risk_perms = ["admin", "sudo", "config_change", "delete"]
+        medium_risk_perms = ["deploy", "database_access"]
+        
+        for perm in permissions:
+            if perm in high_risk_perms:
+                risk_score += 10
+            elif perm in medium_risk_perms:
+                risk_score += 5
+            else:
+                risk_score += 1
+        
+        return min(risk_score, 30)  # Cap at 30
+    
+    def calculate_behavior_risk(self, activity):
+        '''
+        Calculate risk score based on user behavior patterns
+        
+        Args:
+            activity: Dictionary containing activity metrics
+        
+        Returns:
+            Integer risk score (0-40)
+        '''
+        # TODO: Implement behavior risk calculation
+        # Consider: failed logins, off-hours access, privilege escalation
+        
+        risk_score = 0
+        
+        # Failed login attempts (high risk indicator)
+        if activity["failed_logins"] > 10:
+            risk_score += 15
+        elif activity["failed_logins"] > 5:
+            risk_score += 8
+        
+        # Off-hours access
+        if activity["off_hours_access"] > 20:
+            risk_score += 12
+        elif activity["off_hours_access"] > 10:
+            risk_score += 6
+        
+        # Privilege escalation attempts
+        risk_score += activity["privilege_escalation_attempts"] * 5
+        
+        # Excessive data downloads
+        if activity["data_downloads"] > 40:
+            risk_score += 8
+        
+        return min(risk_score, 40)  # Cap at 40
+    
+    def calculate_account_hygiene_risk(self, last_password_change):
+        '''
+        Calculate risk based on account security hygiene
+        
+        Args:
+            last_password_change: Days since last password change
+        
+        Returns:
+            Integer risk score (0-30)
+        '''
+        # TODO: Implement account hygiene risk calculation
+        # Password age is a security risk factor
+        
+        if last_password_change > 180:
+            return 30
+        elif last_password_change > 90:
+            return 20
+        elif last_password_change > 60:
+            return 10
+        else:
+            return 5
+    
+    def score_all_users(self):
+        '''
+        Calculate comprehensive risk scores for all users
+        '''
+        for user in self.users:
+            # Calculate individual risk components
+            perm_risk = self.calculate_permission_risk(user["permissions"])
+            behavior_risk = self.calculate_behavior_risk(user["activity"])
+            hygiene_risk = self.calculate_account_hygiene_risk(user["last_password_change"])
+            
+            # Calculate total risk score (0-100)
+            total_risk = perm_risk + behavior_risk + hygiene_risk
+            
+            # Determine risk level
+            if total_risk >= 70:
+                risk_level = "CRITICAL"
+            elif total_risk >= 50:
+                risk_level = "HIGH"
+            elif total_risk >= 30:
+                risk_level = "MEDIUM"
+            else:
+                risk_level = "LOW"
+            
+            # Store results
+            self.risk_scores.append({
+                "username": user["username"],
+                "role": user["role"],
+                "department": user["department"],
+                "permission_risk": perm_risk,
+                "behavior_risk": behavior_risk,
+                "hygiene_risk": hygiene_risk,
+                "total_risk_score": total_risk,
+                "risk_level": risk_level
+            })
+    
+    def generate_report(self):
+        '''Generate and display risk assessment report'''
+        df = pd.DataFrame(self.risk_scores)
+        df = df.sort_values('total_risk_score', ascending=False)
+        
+        print("\n" + "="*80)
+        print("IAM RISK ASSESSMENT REPORT")
+        print("="*80)
+        print(df.to_string(index=False))
+        print("\n" + "="*80)
+        
+        # Summary statistics
+        print("\nRISK SUMMARY:")
+        print(f"Total Users Analyzed: {len(self.risk_scores)}")
+        print(f"Critical Risk: {len(df[df['risk_level'] == 'CRITICAL'])}")
+        print(f"High Risk: {len(df[df['risk_level'] == 'HIGH'])}")
+        print(f"Medium Risk: {len(df[df['risk_level'] == 'MEDIUM'])}")
+        print(f"Low Risk: {len(df[df['risk_level'] == 'LOW'])}")
+        print(f"Average Risk Score: {df['total_risk_score'].mean():.2f}")
+        
+        # Save to file
+        df.to_csv('risk_report.csv', index=False)
+        print("\nDetailed report saved to: risk_report.csv")
+
+# Main execution
+if __name__ == "__main__":
+    scorer = IAMRiskScorer('iam_data.json')
+    scorer.score_all_users()
+    scorer.generate_report()
+Step 2.2: Run Risk Scoring Analysis
+python3 risk_scorer.py
+Step 2.3: Review Results
+# View the CSV report
+cat risk_report.csv
+Task 3: Implement Anomaly Detection
+Step 3.1: Create Anomaly Detector
+nano anomaly_detector.py
+Add the following code:
+
+import json
+import statistics
+
+class AnomalyDetector:
+    '''
+    Detect anomalous behavior patterns in user activities
+    '''
+    
+    def __init__(self, data_file):
+        with open(data_file, 'r') as f:
+            self.users = json.load(f)
+    
+    def detect_anomalies(self):
+        '''
+        Identify users with anomalous behavior patterns
+        '''
+        # TODO: Calculate baseline metrics
+        # Extract all activity metrics
+        login_counts = [u["activity"]["login_count"] for u in self.users]
+        failed_logins = [u["activity"]["failed_logins"] for u in self.users]
+        off_hours = [u["activity"]["off_hours_access"] for u in self.users]
+        
+        # Calculate mean and standard deviation
+        login_mean = statistics.mean(login_counts)
+        login_std = statistics.stdev(login_counts)
+        
+        failed_mean = statistics.mean(failed_logins)
+        failed_std = statistics.stdev(failed_logins)
+        
+        off_hours_mean = statistics.mean(off_hours)
+        off_hours_std = statistics.stdev(off_hours)
+        
+        print("\n" + "="*80)
+        print("ANOMALY DETECTION REPORT")
+        print("="*80)
+        
+        anomalies_found = False
+        
+        for user in self.users:
+            anomalies = []
+            activity = user["activity"]
+            
+            # TODO: Detect anomalies using standard deviation threshold
+            # Flag if value is more than 2 standard deviations from mean
+            
+            if activity["login_count"] > login_mean + (2 * login_std):
+                anomalies.append(f"Excessive logins: {activity['login_count']}")
+            
+            if activity["failed_logins"] > failed_mean + (2 * failed_std):
+                anomalies.append(f"High failed logins: {activity['failed_logins']}")
+            
+            if activity["off_hours_access"] > off_hours_mean + (2 * off_hours_std):
+                anomalies.append(f"Unusual off-hours access: {activity['off_hours_access']}")
+            
+            if activity["privilege_escalation_attempts"] > 0:
+                anomalies.append(f"Privilege escalation attempts: {activity['privilege_escalation_attempts']}")
+            
+            if anomalies:
+                anomalies_found = True
+                print(f"\nUSER: {user['username']} ({user['role']})")
+                print(f"Department: {user['department']}")
+                print("Anomalies detected:")
+                for anomaly in anomalies:
+                    print(f"  - {anomaly}")
+        
+        if not anomalies_found:
+            print("\nNo significant anomalies detected.")
+        
+        print("\n" + "="*80)
+
+# Run anomaly detection
+if __name__ == "__main__":
+    detector = AnomalyDetector('iam_data.json')
+    detector.detect_anomalies()
+Step 3.2: Run Anomaly Detection
+python3 anomaly_detector.py
+Verification
+Step 1: Verify All Components
+# Check that all files were created
+ls -lh ~/iam-risk-lab/
+
+# Expected files:
+# - generate_data.py
+# - iam_data.json
+# - risk_scorer.py
+# - risk_report.csv
+# - anomaly_detector.py
+Step 2: Validate Risk Scores
+# View risk report summary
+python3 -c "
+import pandas as pd
+df = pd.read_csv('risk_report.csv')
+print('Risk Level Distribution:')
+print(df['risk_level'].value_counts())
+print('\nTop 3 Highest Risk Users:')
+print(df.nlargest(3, 'total_risk_score')[['username', 'total_risk_score', 'risk_level']])
+"
+Step 3: Test with Custom Data
+Create a test user with high-risk profile:
+
+python3 << 'EOF'
+import json
+
+# Load existing data
+with open('iam_data.json', 'r') as f:
+    users = json.load(f)
+
+# Add high-risk test user
+test_user = {
+    "username": "test_user",
+    "role": "admin",
+    "department": "Test",
+    "permissions": ["admin", "sudo", "delete", "config_change"],
+    "activity": {
+        "login_count": 80,
+        "failed_logins": 25,
+        "off_hours_access": 35,
+        "data_downloads": 45,
+        "privilege_escalation_attempts": 3
+    },
+    "last_password_change": 200
+}
+
+users.append(test_user)
+
+with open('iam_data.json', 'w') as f:
+    json.dump(users, f, indent=2)
+
+print("Test user added successfully!")
+EOF
+
+# Re-run risk scoring
+python3 risk_scorer.py
+Troubleshooting
+Issue: Module not found error
+# Reinstall required packages
+pip3 install --user pandas numpy
+Issue: Permission denied
+# Ensure files are executable
+chmod +x *.py
+Issue: JSON decode error
+# Regenerate data file
+python3 generate_data.py
+Conclusion
+You have successfully built an Identity and Access Management risk scoring system that:
+
+Quantifies IAM risks using multiple risk factors (permissions, behavior, account hygiene)
+Scores users and roles based on their access levels and activity patterns
+Detects anomalies using statistical analysis to identify unusual behavior
+Generates reports for security teams to prioritize remediation efforts
+This system demonstrates fundamental concepts used in enterprise IAM security tools. In production environments, similar systems integrate with SIEM platforms, use machine learning for advanced anomaly detection, and process millions of events in real-time.
+
+Key Takeaways:
+
+Risk scoring combines multiple factors for comprehensive assessment
+Behavioral analysis helps identify insider threats and compromised accounts
+Statistical methods can detect anomalies without complex machine learning
+Regular monitoring and scoring help maintain security posture
+Next Steps:
+
+Integrate with real authentication logs (e.g., /var/log/auth.log)
+Add time-series analysis for trend detection
+Implement automated alerting for critical risk levels
+Create remediation workflows for high-risk users
