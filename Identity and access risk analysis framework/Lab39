@@ -1,0 +1,429 @@
+Identity and Access Risk Analysis Framework
+Prerequisites
+Basic Linux command line knowledge
+Understanding of user accounts and file permissions
+Familiarity with text editors (nano or vi)
+Basic Python programming concepts
+Understanding of JSON format
+Learning Objectives
+By completing this lab, you will:
+
+Understand holistic IAM (Identity and Access Management) risk analysis
+Correlate user identities with their permissions
+Analyze user behavior patterns
+Identify and assess security risks
+Create a comprehensive risk scoring framework
+Environment Setup
+Step 1: Update System and Install Required Tools
+sudo apt update
+sudo apt install -y python3 python3-pip git jq
+Step 2: Create Lab Directory Structure
+mkdir -p ~/iam-risk-lab/{data,scripts,reports}
+cd ~/iam-risk-lab
+Step 3: Install Python Libraries
+pip3 install pandas numpy
+Task 1: Set Up Identity and Access Data
+Step 1.1: Create Sample User Identity Data
+Create a file with user information:
+
+cat > data/users.json << 'EOF'
+{
+  "users": [
+    {"id": "U001", "name": "Alice Johnson", "department": "Engineering", "role": "Developer", "hire_date": "2020-01-15"},
+    {"id": "U002", "name": "Bob Smith", "department": "Finance", "role": "Analyst", "hire_date": "2019-06-20"},
+    {"id": "U003", "name": "Carol White", "department": "Engineering", "role": "Admin", "hire_date": "2018-03-10"},
+    {"id": "U004", "name": "David Brown", "department": "HR", "role": "Manager", "hire_date": "2021-09-01"},
+    {"id": "U005", "name": "Eve Davis", "department": "Engineering", "role": "Developer", "hire_date": "2022-02-14"}
+  ]
+}
+EOF
+Step 1.2: Create Permissions Data
+Create a file mapping users to their system permissions:
+
+cat > data/permissions.json << 'EOF'
+{
+  "permissions": [
+    {"user_id": "U001", "resource": "database_prod", "access_level": "read", "granted_date": "2020-01-20"},
+    {"user_id": "U001", "resource": "code_repo", "access_level": "write", "granted_date": "2020-01-20"},
+    {"user_id": "U002", "resource": "financial_reports", "access_level": "read", "granted_date": "2019-06-25"},
+    {"user_id": "U002", "resource": "database_prod", "access_level": "read", "granted_date": "2020-03-10"},
+    {"user_id": "U003", "resource": "database_prod", "access_level": "admin", "granted_date": "2018-03-15"},
+    {"user_id": "U003", "resource": "server_config", "access_level": "admin", "granted_date": "2018-03-15"},
+    {"user_id": "U003", "resource": "code_repo", "access_level": "admin", "granted_date": "2018-03-15"},
+    {"user_id": "U004", "resource": "hr_records", "access_level": "write", "granted_date": "2021-09-05"},
+    {"user_id": "U005", "resource": "code_repo", "access_level": "write", "granted_date": "2022-02-20"},
+    {"user_id": "U005", "resource": "database_prod", "access_level": "admin", "granted_date": "2022-02-20"}
+  ]
+}
+EOF
+Step 1.3: Create Behavior Log Data
+Create a file with user activity logs:
+
+cat > data/behavior_logs.json << 'EOF'
+{
+  "activities": [
+    {"user_id": "U001", "action": "login", "timestamp": "2024-01-15 09:00:00", "ip_address": "192.168.1.10", "success": true},
+    {"user_id": "U001", "action": "access_database", "timestamp": "2024-01-15 09:15:00", "resource": "database_prod", "success": true},
+    {"user_id": "U002", "action": "login", "timestamp": "2024-01-15 08:30:00", "ip_address": "192.168.1.15", "success": true},
+    {"user_id": "U003", "action": "login", "timestamp": "2024-01-15 22:45:00", "ip_address": "10.0.0.50", "success": true},
+    {"user_id": "U003", "action": "modify_config", "timestamp": "2024-01-15 23:00:00", "resource": "server_config", "success": true},
+    {"user_id": "U005", "action": "login", "timestamp": "2024-01-15 10:00:00", "ip_address": "192.168.1.25", "success": false},
+    {"user_id": "U005", "action": "login", "timestamp": "2024-01-15 10:05:00", "ip_address": "192.168.1.25", "success": false},
+    {"user_id": "U005", "action": "access_database", "timestamp": "2024-01-15 11:00:00", "resource": "database_prod", "success": true},
+    {"user_id": "U005", "action": "delete_records", "timestamp": "2024-01-15 11:30:00", "resource": "database_prod", "success": true}
+  ]
+}
+EOF
+Task 2: Build the Risk Analysis Framework
+Step 2.1: Create the Main Analysis Script
+Create a Python script that correlates all data sources:
+
+nano scripts/iam_risk_analyzer.py
+Add the following code (students will complete the TODO sections):
+
+#!/usr/bin/env python3
+"""
+IAM Risk Analysis Framework
+Correlates user identities, permissions, behavior, and calculates risk scores
+"""
+
+import json
+import pandas as pd
+from datetime import datetime
+from collections import defaultdict
+
+class IAMRiskAnalyzer:
+    """Main class for analyzing IAM risks"""
+    
+    def __init__(self, users_file, permissions_file, behavior_file):
+        """
+        Initialize the analyzer with data files
+        
+        Args:
+            users_file: Path to users JSON file
+            permissions_file: Path to permissions JSON file
+            behavior_file: Path to behavior logs JSON file
+        """
+        self.users = self.load_json(users_file)['users']
+        self.permissions = self.load_json(permissions_file)['permissions']
+        self.activities = self.load_json(behavior_file)['activities']
+        self.risk_scores = {}
+    
+    def load_json(self, filepath):
+        """Load JSON data from file"""
+        with open(filepath, 'r') as f:
+            return json.load(f)
+    
+    def correlate_user_data(self, user_id):
+        """
+        Correlate all data for a specific user
+        
+        Args:
+            user_id: The user ID to analyze
+            
+        Returns:
+            Dictionary containing correlated user data
+        """
+        # TODO: Find user information from self.users list
+        user_info = None
+        for user in self.users:
+            if user['id'] == user_id:
+                user_info = user
+                break
+        
+        # TODO: Find all permissions for this user from self.permissions list
+        user_permissions = []
+        for perm in self.permissions:
+            if perm['user_id'] == user_id:
+                user_permissions.append(perm)
+        
+        # TODO: Find all activities for this user from self.activities list
+        user_activities = []
+        for activity in self.activities:
+            if activity['user_id'] == user_id:
+                user_activities.append(activity)
+        
+        return {
+            'identity': user_info,
+            'permissions': user_permissions,
+            'activities': user_activities
+        }
+    
+    def analyze_permission_risk(self, permissions):
+        """
+        Calculate risk score based on permissions
+        
+        Args:
+            permissions: List of permission dictionaries
+            
+        Returns:
+            Risk score (0-100)
+        """
+        risk_score = 0
+        
+        # TODO: Count admin permissions (higher risk)
+        admin_count = 0
+        for perm in permissions:
+            if perm['access_level'] == 'admin':
+                admin_count += 1
+        
+        # TODO: Calculate risk based on number and type of permissions
+        # Admin access = 30 points each, write = 15 points, read = 5 points
+        for perm in permissions:
+            if perm['access_level'] == 'admin':
+                risk_score += 30
+            elif perm['access_level'] == 'write':
+                risk_score += 15
+            else:
+                risk_score += 5
+        
+        # Cap at 100
+        return min(risk_score, 100)
+    
+    def analyze_behavior_risk(self, activities):
+        """
+        Calculate risk score based on user behavior
+        
+        Args:
+            activities: List of activity dictionaries
+            
+        Returns:
+            Risk score (0-100)
+        """
+        risk_score = 0
+        
+        # TODO: Check for failed login attempts
+        failed_logins = 0
+        for activity in activities:
+            if activity['action'] == 'login' and not activity.get('success', True):
+                failed_logins += 1
+        
+        # Multiple failed logins = suspicious
+        risk_score += failed_logins * 20
+        
+        # TODO: Check for unusual activity times (after hours: 22:00-06:00)
+        for activity in activities:
+            timestamp = activity.get('timestamp', '')
+            if timestamp:
+                hour = int(timestamp.split()[1].split(':')[0])
+                if hour >= 22 or hour <= 6:
+                    risk_score += 15
+        
+        # TODO: Check for high-risk actions
+        high_risk_actions = ['delete_records', 'modify_config', 'privilege_escalation']
+        for activity in activities:
+            if activity['action'] in high_risk_actions:
+                risk_score += 25
+        
+        return min(risk_score, 100)
+    
+    def calculate_composite_risk(self, user_id):
+        """
+        Calculate overall risk score for a user
+        
+        Args:
+            user_id: The user ID to analyze
+            
+        Returns:
+            Dictionary with detailed risk analysis
+        """
+        # Get correlated data
+        user_data = self.correlate_user_data(user_id)
+        
+        # Calculate individual risk scores
+        permission_risk = self.analyze_permission_risk(user_data['permissions'])
+        behavior_risk = self.analyze_behavior_risk(user_data['activities'])
+        
+        # TODO: Calculate composite risk (weighted average)
+        # Permission risk weight: 40%, Behavior risk weight: 60%
+        composite_risk = (permission_risk * 0.4) + (behavior_risk * 0.6)
+        
+        # Determine risk level
+        if composite_risk >= 70:
+            risk_level = "HIGH"
+        elif composite_risk >= 40:
+            risk_level = "MEDIUM"
+        else:
+            risk_level = "LOW"
+        
+        return {
+            'user_id': user_id,
+            'user_name': user_data['identity']['name'] if user_data['identity'] else 'Unknown',
+            'department': user_data['identity']['department'] if user_data['identity'] else 'Unknown',
+            'permission_risk': round(permission_risk, 2),
+            'behavior_risk': round(behavior_risk, 2),
+            'composite_risk': round(composite_risk, 2),
+            'risk_level': risk_level,
+            'permission_count': len(user_data['permissions']),
+            'activity_count': len(user_data['activities'])
+        }
+    
+    def analyze_all_users(self):
+        """Analyze risk for all users and generate report"""
+        results = []
+        
+        # Get unique user IDs
+        user_ids = set([user['id'] for user in self.users])
+        
+        # Analyze each user
+        for user_id in user_ids:
+            risk_analysis = self.calculate_composite_risk(user_id)
+            results.append(risk_analysis)
+        
+        # Sort by composite risk (highest first)
+        results.sort(key=lambda x: x['composite_risk'], reverse=True)
+        
+        return results
+    
+    def generate_report(self, output_file):
+        """
+        Generate a comprehensive risk report
+        
+        Args:
+            output_file: Path to save the report
+        """
+        results = self.analyze_all_users()
+        
+        # Create report
+        report = []
+        report.append("=" * 80)
+        report.append("IAM RISK ANALYSIS REPORT")
+        report.append("=" * 80)
+        report.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        report.append(f"Total Users Analyzed: {len(results)}")
+        report.append("=" * 80)
+        report.append("")
+        
+        # Summary statistics
+        high_risk = sum(1 for r in results if r['risk_level'] == 'HIGH')
+        medium_risk = sum(1 for r in results if r['risk_level'] == 'MEDIUM')
+        low_risk = sum(1 for r in results if r['risk_level'] == 'LOW')
+        
+        report.append("RISK SUMMARY:")
+        report.append(f"  High Risk Users: {high_risk}")
+        report.append(f"  Medium Risk Users: {medium_risk}")
+        report.append(f"  Low Risk Users: {low_risk}")
+        report.append("")
+        report.append("=" * 80)
+        report.append("DETAILED USER RISK ANALYSIS:")
+        report.append("=" * 80)
+        
+        # Individual user details
+        for result in results:
+            report.append("")
+            report.append(f"User: {result['user_name']} ({result['user_id']})")
+            report.append(f"Department: {result['department']}")
+            report.append(f"Risk Level: {result['risk_level']}")
+            report.append(f"Composite Risk Score: {result['composite_risk']}/100")
+            report.append(f"  - Permission Risk: {result['permission_risk']}/100")
+            report.append(f"  - Behavior Risk: {result['behavior_risk']}/100")
+            report.append(f"Permissions: {result['permission_count']}")
+            report.append(f"Activities Logged: {result['activity_count']}")
+            report.append("-" * 80)
+        
+        # Write to file
+        with open(output_file, 'w') as f:
+            f.write('\n'.join(report))
+        
+        print(f"Report generated: {output_file}")
+        return results
+
+
+def main():
+    """Main execution function"""
+    print("Starting IAM Risk Analysis...")
+    
+    # Initialize analyzer
+    analyzer = IAMRiskAnalyzer(
+        'data/users.json',
+        'data/permissions.json',
+        'data/behavior_logs.json'
+    )
+    
+    # Generate report
+    results = analyzer.generate_report('reports/iam_risk_report.txt')
+    
+    # Display summary
+    print("\n" + "=" * 60)
+    print("ANALYSIS COMPLETE")
+    print("=" * 60)
+    for result in results:
+        print(f"{result['user_name']:20} | Risk: {result['risk_level']:6} | Score: {result['composite_risk']:5.1f}")
+    print("=" * 60)
+
+
+if __name__ == "__main__":
+    main()
+Save and exit (Ctrl+X, Y, Enter).
+
+Step 2.2: Make the Script Executable
+chmod +x scripts/iam_risk_analyzer.py
+Step 2.3: Run the Risk Analysis
+cd ~/iam-risk-lab
+python3 scripts/iam_risk_analyzer.py
+Step 2.4: View the Generated Report
+cat reports/iam_risk_report.txt
+Verification
+Step 1: Verify Data Files Exist
+ls -lh data/
+Expected output: Three JSON files (users.json, permissions.json, behavior_logs.json)
+
+Step 2: Check Report Generation
+ls -lh reports/
+Expected output: iam_risk_report.txt file
+
+Step 3: Verify Risk Scores
+grep "Risk Level:" reports/iam_risk_report.txt
+Expected output: Risk levels for all users
+
+Step 4: Identify High-Risk Users
+grep -A 2 "Risk Level: HIGH" reports/iam_risk_report.txt
+This shows users requiring immediate attention.
+
+Step 5: Test Individual User Analysis
+Create a quick test script:
+
+python3 << 'EOF'
+import sys
+sys.path.append('scripts')
+from iam_risk_analyzer import IAMRiskAnalyzer
+
+analyzer = IAMRiskAnalyzer('data/users.json', 'data/permissions.json', 'data/behavior_logs.json')
+result = analyzer.calculate_composite_risk('U003')
+print(f"User U003 Risk Analysis:")
+print(f"  Composite Risk: {result['composite_risk']}")
+print(f"  Risk Level: {result['risk_level']}")
+EOF
+Troubleshooting Tips
+Issue: Module import errors
+
+Solution: Ensure you're running from ~/iam-risk-lab directory
+Run: cd ~/iam-risk-lab && python3 scripts/iam_risk_analyzer.py
+Issue: JSON parsing errors
+
+Solution: Verify JSON files are properly formatted
+Run: jq . data/users.json to validate JSON syntax
+Issue: Permission denied errors
+
+Solution: Check script permissions
+Run: chmod +x scripts/iam_risk_analyzer.py
+Issue: No output in report
+
+Solution: Check if reports directory exists
+Run: mkdir -p reports
+Conclusion
+You have successfully built an Identity and Access Risk Analysis Framework that:
+
+Correlated multiple data sources: Combined user identities, permissions, and behavior logs
+Analyzed permission risks: Evaluated access levels and resource exposure
+Assessed behavior patterns: Identified suspicious activities and anomalies
+Calculated composite risk scores: Created weighted risk assessments
+Generated actionable reports: Produced prioritized lists of high-risk users
+This framework demonstrates holistic IAM risk analysis by integrating identity management, access control, and behavioral analytics. In real-world scenarios, this approach helps security teams:
+
+Prioritize security investigations
+Identify insider threats
+Ensure compliance with least-privilege principles
+Detect compromised accounts
+Make data-driven access decisions
+The skills learned here are fundamental to cybersecurity roles focused on identity governance, security operations, and risk management.
