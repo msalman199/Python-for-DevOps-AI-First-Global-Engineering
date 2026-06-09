@@ -1,0 +1,673 @@
+Cloud Security Audit Engine Using Artifacts
+Prerequisites
+Basic Linux command line knowledge
+Understanding of file systems and text files
+Familiarity with basic security concepts (passwords, permissions)
+No prior cloud security experience required
+Learning Objectives
+By completing this lab, you will:
+
+Understand cloud security audit fundamentals
+Analyze configuration files for security issues
+Parse and examine log files for suspicious activity
+Create automated compliance checks using open-source tools
+Generate security audit reports
+Environment Setup
+Step 1: Install Required Tools
+After clicking "Start Lab" and accessing your Linux machine, install the necessary tools:
+
+# Update package manager
+sudo apt update
+
+# Install Python and pip
+sudo apt install -y python3 python3-pip
+
+# Install jq for JSON parsing
+sudo apt install -y jq
+
+# Install additional utilities
+sudo apt install -y curl git
+Step 2: Create Lab Directory Structure
+# Create working directory
+mkdir -p ~/security-audit-lab
+cd ~/security-audit-lab
+
+# Create subdirectories
+mkdir -p configs logs artifacts reports
+Step 3: Install Python Libraries
+# Install required Python packages
+pip3 install pyyaml requests
+Task 1: Create Sample Security Artifacts
+Step 1: Generate Sample Configuration Files
+Create realistic configuration files that simulate cloud infrastructure:
+
+# Create a sample SSH configuration
+cat > configs/sshd_config.sample << 'EOF'
+Port 22
+PermitRootLogin yes
+PasswordAuthentication yes
+PermitEmptyPasswords no
+X11Forwarding yes
+MaxAuthTries 6
+EOF
+
+# Create a sample firewall configuration
+cat > configs/firewall_rules.json << 'EOF'
+{
+  "rules": [
+    {
+      "id": "rule-001",
+      "protocol": "tcp",
+      "port": "22",
+      "source": "0.0.0.0/0",
+      "action": "allow"
+    },
+    {
+      "id": "rule-002",
+      "protocol": "tcp",
+      "port": "3389",
+      "source": "0.0.0.0/0",
+      "action": "allow"
+    },
+    {
+      "id": "rule-003",
+      "protocol": "tcp",
+      "port": "443",
+      "source": "0.0.0.0/0",
+      "action": "allow"
+    }
+  ]
+}
+EOF
+
+# Create a sample user permissions file
+cat > configs/users.yaml << 'EOF'
+users:
+  - username: admin
+    uid: 1000
+    sudo: true
+    password_age: 365
+  - username: developer
+    uid: 1001
+    sudo: true
+    password_age: 180
+  - username: guest
+    uid: 1002
+    sudo: false
+    password_age: 90
+EOF
+Step 2: Generate Sample Log Files
+Create log files with various security events:
+
+# Create authentication log
+cat > logs/auth.log << 'EOF'
+2024-01-15 10:23:45 INFO: User admin logged in from 192.168.1.100
+2024-01-15 10:45:12 WARNING: Failed login attempt for user root from 203.0.113.45
+2024-01-15 11:02:33 WARNING: Failed login attempt for user root from 203.0.113.45
+2024-01-15 11:15:22 WARNING: Failed login attempt for user admin from 198.51.100.23
+2024-01-15 12:30:11 INFO: User developer logged in from 192.168.1.105
+2024-01-15 13:45:00 ERROR: Brute force attack detected from 203.0.113.45
+2024-01-15 14:20:15 INFO: User admin logged out
+EOF
+
+# Create access log
+cat > logs/access.log << 'EOF'
+2024-01-15 10:25:00 GET /api/users 200 admin
+2024-01-15 10:30:15 POST /api/config 200 admin
+2024-01-15 11:45:30 GET /api/secrets 403 guest
+2024-01-15 12:00:45 DELETE /api/users/1001 200 admin
+2024-01-15 13:15:20 GET /admin/panel 200 developer
+EOF
+Task 2: Build the Security Audit Engine
+Step 1: Create Configuration Analyzer
+Create a Python script to analyze configuration files for security issues:
+
+# Create the config analyzer script
+cat > audit_configs.py << 'EOF'
+#!/usr/bin/env python3
+"""
+Configuration Security Analyzer
+Checks configuration files against security best practices
+"""
+
+import json
+import yaml
+import sys
+
+def analyze_ssh_config(config_file):
+    """
+    Analyze SSH configuration for security issues.
+    
+    Args:
+        config_file: Path to SSH config file
+    
+    Returns:
+        List of security findings
+    """
+    findings = []
+    
+    # TODO: Read the SSH config file
+    with open(config_file, 'r') as f:
+        content = f.read()
+    
+    # Check for insecure settings
+    if 'PermitRootLogin yes' in content:
+        findings.append({
+            'severity': 'HIGH',
+            'issue': 'Root login is enabled',
+            'recommendation': 'Set PermitRootLogin to no'
+        })
+    
+    if 'PasswordAuthentication yes' in content:
+        findings.append({
+            'severity': 'MEDIUM',
+            'issue': 'Password authentication enabled',
+            'recommendation': 'Use key-based authentication only'
+        })
+    
+    # TODO: Add check for MaxAuthTries
+    if 'MaxAuthTries 6' in content or 'MaxAuthTries' not in content:
+        findings.append({
+            'severity': 'MEDIUM',
+            'issue': 'MaxAuthTries is too high or not set',
+            'recommendation': 'Set MaxAuthTries to 3'
+        })
+    
+    return findings
+
+def analyze_firewall_rules(config_file):
+    """
+    Analyze firewall rules for overly permissive access.
+    
+    Args:
+        config_file: Path to firewall rules JSON file
+    
+    Returns:
+        List of security findings
+    """
+    findings = []
+    
+    # TODO: Load JSON configuration
+    with open(config_file, 'r') as f:
+        config = json.load(f)
+    
+    # Check each rule
+    for rule in config.get('rules', []):
+        # TODO: Check for rules open to the internet (0.0.0.0/0)
+        if rule['source'] == '0.0.0.0/0':
+            findings.append({
+                'severity': 'HIGH',
+                'issue': f"Rule {rule['id']} allows access from anywhere",
+                'recommendation': f"Restrict source IP for port {rule['port']}"
+            })
+    
+    return findings
+
+def analyze_user_permissions(config_file):
+    """
+    Analyze user permissions for security issues.
+    
+    Args:
+        config_file: Path to users YAML file
+    
+    Returns:
+        List of security findings
+    """
+    findings = []
+    
+    # TODO: Load YAML configuration
+    with open(config_file, 'r') as f:
+        config = yaml.safe_load(f)
+    
+    # Check user settings
+    for user in config.get('users', []):
+        # TODO: Check password age policy
+        if user.get('password_age', 0) > 90:
+            findings.append({
+                'severity': 'MEDIUM',
+                'issue': f"User {user['username']} has password age > 90 days",
+                'recommendation': 'Enforce 90-day password rotation'
+            })
+        
+        # TODO: Check for excessive sudo privileges
+        if user.get('sudo') and user['username'] not in ['admin']:
+            findings.append({
+                'severity': 'LOW',
+                'issue': f"User {user['username']} has sudo privileges",
+                'recommendation': 'Review if sudo access is necessary'
+            })
+    
+    return findings
+
+def main():
+    """Main execution function"""
+    print("=" * 60)
+    print("CONFIGURATION SECURITY AUDIT")
+    print("=" * 60)
+    
+    all_findings = []
+    
+    # Analyze SSH configuration
+    print("\n[*] Analyzing SSH Configuration...")
+    ssh_findings = analyze_ssh_config('configs/sshd_config.sample')
+    all_findings.extend(ssh_findings)
+    
+    # Analyze firewall rules
+    print("[*] Analyzing Firewall Rules...")
+    fw_findings = analyze_firewall_rules('configs/firewall_rules.json')
+    all_findings.extend(fw_findings)
+    
+    # Analyze user permissions
+    print("[*] Analyzing User Permissions...")
+    user_findings = analyze_user_permissions('configs/users.yaml')
+    all_findings.extend(user_findings)
+    
+    # Display results
+    print(f"\n[*] Total Findings: {len(all_findings)}")
+    print("\nDETAILED FINDINGS:")
+    print("-" * 60)
+    
+    for i, finding in enumerate(all_findings, 1):
+        print(f"\n{i}. [{finding['severity']}] {finding['issue']}")
+        print(f"   Recommendation: {finding['recommendation']}")
+    
+    # Save report
+    with open('reports/config_audit.json', 'w') as f:
+        json.dump(all_findings, f, indent=2)
+    
+    print(f"\n[*] Report saved to reports/config_audit.json")
+
+if __name__ == '__main__':
+    main()
+EOF
+
+chmod +x audit_configs.py
+Step 2: Create Log Analyzer
+Create a script to analyze logs for security events:
+
+cat > audit_logs.py << 'EOF'
+#!/usr/bin/env python3
+"""
+Log Security Analyzer
+Detects suspicious activities in log files
+"""
+
+import re
+import json
+from collections import defaultdict
+
+def analyze_auth_logs(log_file):
+    """
+    Analyze authentication logs for suspicious activity.
+    
+    Args:
+        log_file: Path to authentication log file
+    
+    Returns:
+        Dictionary with security findings
+    """
+    findings = []
+    failed_attempts = defaultdict(int)
+    
+    # TODO: Read and parse log file
+    with open(log_file, 'r') as f:
+        for line in f:
+            # TODO: Detect failed login attempts
+            if 'Failed login attempt' in line:
+                # Extract IP address
+                ip_match = re.search(r'from (\d+\.\d+\.\d+\.\d+)', line)
+                if ip_match:
+                    ip = ip_match.group(1)
+                    failed_attempts[ip] += 1
+            
+            # TODO: Detect brute force attacks
+            if 'Brute force attack' in line:
+                findings.append({
+                    'severity': 'CRITICAL',
+                    'type': 'Brute Force Attack',
+                    'details': line.strip()
+                })
+    
+    # TODO: Flag IPs with multiple failed attempts
+    for ip, count in failed_attempts.items():
+        if count >= 3:
+            findings.append({
+                'severity': 'HIGH',
+                'type': 'Multiple Failed Logins',
+                'details': f"IP {ip} had {count} failed login attempts"
+            })
+    
+    return findings
+
+def analyze_access_logs(log_file):
+    """
+    Analyze access logs for unauthorized access attempts.
+    
+    Args:
+        log_file: Path to access log file
+    
+    Returns:
+        List of security findings
+    """
+    findings = []
+    
+    # TODO: Read and parse access log
+    with open(log_file, 'r') as f:
+        for line in f:
+            # TODO: Check for 403 Forbidden responses
+            if '403' in line:
+                findings.append({
+                    'severity': 'MEDIUM',
+                    'type': 'Unauthorized Access Attempt',
+                    'details': line.strip()
+                })
+            
+            # TODO: Check for sensitive endpoint access
+            if '/admin/' in line or '/api/secrets' in line:
+                findings.append({
+                    'severity': 'MEDIUM',
+                    'type': 'Sensitive Endpoint Access',
+                    'details': line.strip()
+                })
+            
+            # TODO: Check for DELETE operations
+            if 'DELETE' in line:
+                findings.append({
+                    'severity': 'LOW',
+                    'type': 'Delete Operation',
+                    'details': line.strip()
+                })
+    
+    return findings
+
+def main():
+    """Main execution function"""
+    print("=" * 60)
+    print("LOG SECURITY AUDIT")
+    print("=" * 60)
+    
+    all_findings = []
+    
+    # Analyze authentication logs
+    print("\n[*] Analyzing Authentication Logs...")
+    auth_findings = analyze_auth_logs('logs/auth.log')
+    all_findings.extend(auth_findings)
+    
+    # Analyze access logs
+    print("[*] Analyzing Access Logs...")
+    access_findings = analyze_access_logs('logs/access.log')
+    all_findings.extend(access_findings)
+    
+    # Display results
+    print(f"\n[*] Total Security Events: {len(all_findings)}")
+    print("\nDETAILED FINDINGS:")
+    print("-" * 60)
+    
+    # Group by severity
+    critical = [f for f in all_findings if f['severity'] == 'CRITICAL']
+    high = [f for f in all_findings if f['severity'] == 'HIGH']
+    medium = [f for f in all_findings if f['severity'] == 'MEDIUM']
+    low = [f for f in all_findings if f['severity'] == 'LOW']
+    
+    for severity, findings in [('CRITICAL', critical), ('HIGH', high), 
+                                ('MEDIUM', medium), ('LOW', low)]:
+        if findings:
+            print(f"\n{severity} SEVERITY ({len(findings)}):")
+            for finding in findings:
+                print(f"  - {finding['type']}: {finding['details']}")
+    
+    # Save report
+    with open('reports/log_audit.json', 'w') as f:
+        json.dump(all_findings, f, indent=2)
+    
+    print(f"\n[*] Report saved to reports/log_audit.json")
+
+if __name__ == '__main__':
+    main()
+EOF
+
+chmod +x audit_logs.py
+Step 3: Create Compliance Report Generator
+Create a script that generates a comprehensive compliance report:
+
+cat > generate_report.py << 'EOF'
+#!/usr/bin/env python3
+"""
+Compliance Report Generator
+Combines all audit findings into a comprehensive report
+"""
+
+import json
+from datetime import datetime
+
+def load_audit_results():
+    """Load all audit results from JSON files"""
+    results = {}
+    
+    # TODO: Load configuration audit results
+    try:
+        with open('reports/config_audit.json', 'r') as f:
+            results['config'] = json.load(f)
+    except FileNotFoundError:
+        results['config'] = []
+    
+    # TODO: Load log audit results
+    try:
+        with open('reports/log_audit.json', 'r') as f:
+            results['log'] = json.load(f)
+    except FileNotFoundError:
+        results['log'] = []
+    
+    return results
+
+def calculate_compliance_score(findings):
+    """
+    Calculate compliance score based on findings.
+    
+    Args:
+        findings: Dictionary of all findings
+    
+    Returns:
+        Compliance score (0-100)
+    """
+    # TODO: Count findings by severity
+    total_issues = 0
+    severity_weights = {
+        'CRITICAL': 10,
+        'HIGH': 5,
+        'MEDIUM': 2,
+        'LOW': 1
+    }
+    
+    penalty = 0
+    
+    for category in findings.values():
+        for finding in category:
+            severity = finding.get('severity', 'LOW')
+            penalty += severity_weights.get(severity, 1)
+            total_issues += 1
+    
+    # TODO: Calculate score (100 - penalties, minimum 0)
+    score = max(0, 100 - penalty)
+    
+    return score, total_issues
+
+def generate_html_report(results, score, total_issues):
+    """Generate HTML compliance report"""
+    
+    html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Security Compliance Report</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 20px; }}
+        .header {{ background: #2c3e50; color: white; padding: 20px; }}
+        .score {{ font-size: 48px; font-weight: bold; }}
+        .critical {{ color: #e74c3c; }}
+        .high {{ color: #e67e22; }}
+        .medium {{ color: #f39c12; }}
+        .low {{ color: #3498db; }}
+        .section {{ margin: 20px 0; padding: 15px; border: 1px solid #ddd; }}
+        table {{ width: 100%; border-collapse: collapse; }}
+        th, td {{ padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }}
+        th {{ background: #34495e; color: white; }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Security Compliance Audit Report</h1>
+        <p>Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+    </div>
+    
+    <div class="section">
+        <h2>Compliance Score</h2>
+        <div class="score">{score}/100</div>
+        <p>Total Issues Found: {total_issues}</p>
+    </div>
+    
+    <div class="section">
+        <h2>Configuration Audit Findings</h2>
+        <table>
+            <tr>
+                <th>Severity</th>
+                <th>Issue</th>
+                <th>Recommendation</th>
+            </tr>
+"""
+    
+    for finding in results['config']:
+        severity_class = finding['severity'].lower()
+        html += f"""
+            <tr>
+                <td class="{severity_class}">{finding['severity']}</td>
+                <td>{finding['issue']}</td>
+                <td>{finding['recommendation']}</td>
+            </tr>
+"""
+    
+    html += """
+        </table>
+    </div>
+    
+    <div class="section">
+        <h2>Log Analysis Findings</h2>
+        <table>
+            <tr>
+                <th>Severity</th>
+                <th>Type</th>
+                <th>Details</th>
+            </tr>
+"""
+    
+    for finding in results['log']:
+        severity_class = finding['severity'].lower()
+        html += f"""
+            <tr>
+                <td class="{severity_class}">{finding['severity']}</td>
+                <td>{finding['type']}</td>
+                <td>{finding['details']}</td>
+            </tr>
+"""
+    
+    html += """
+        </table>
+    </div>
+</body>
+</html>
+"""
+    
+    return html
+
+def main():
+    """Main execution function"""
+    print("=" * 60)
+    print("GENERATING COMPLIANCE REPORT")
+    print("=" * 60)
+    
+    # TODO: Load all audit results
+    print("\n[*] Loading audit results...")
+    results = load_audit_results()
+    
+    # TODO: Calculate compliance score
+    print("[*] Calculating compliance score...")
+    score, total_issues = calculate_compliance_score(results)
+    
+    # TODO: Generate HTML report
+    print("[*] Generating HTML report...")
+    html_report = generate_html_report(results, score, total_issues)
+    
+    # TODO: Save report
+    with open('reports/compliance_report.html', 'w') as f:
+        f.write(html_report)
+    
+    print(f"\n[*] Compliance Score: {score}/100")
+    print(f"[*] Total Issues: {total_issues}")
+    print(f"[*] HTML report saved to reports/compliance_report.html")
+    
+    # Display summary
+    print("\nSUMMARY:")
+    print(f"  Configuration Issues: {len(results['config'])}")
+    print(f"  Log Security Events: {len(results['log'])}")
+
+if __name__ == '__main__':
+    main()
+EOF
+
+chmod +x generate_report.py
+Verification
+Step 1: Run Configuration Audit
+# Execute configuration analyzer
+python3 audit_configs.py
+Expected output should show findings for SSH, firewall, and user configurations.
+
+Step 2: Run Log Audit
+# Execute log analyzer
+python3 audit_logs.py
+Expected output should identify failed logins, brute force attempts, and unauthorized access.
+
+Step 3: Generate Compliance Report
+# Generate final report
+python3 generate_report.py
+Step 4: View Reports
+# View JSON reports
+cat reports/config_audit.json
+cat reports/log_audit.json
+
+# Check HTML report was created
+ls -lh reports/compliance_report.html
+Step 5: Verify All Components
+# Count total findings
+echo "Configuration findings:"
+jq '. | length' reports/config_audit.json
+
+echo "Log findings:"
+jq '. | length' reports/log_audit.json
+Troubleshooting Tips
+Issue: Python module not found
+
+Solution: Run pip3 install pyyaml again
+Issue: Permission denied on scripts
+
+Solution: Run chmod +x *.py
+Issue: File not found errors
+
+Solution: Ensure you're in the ~/security-audit-lab directory
+Issue: Empty reports
+
+Solution: Verify sample files were created in configs/ and logs/ directories
+Conclusion
+You have successfully built a cloud security audit engine that:
+
+Analyzes configuration files for security vulnerabilities
+Parses log files to detect suspicious activities
+Generates compliance reports with severity ratings
+Calculates security scores based on findings
+This lab demonstrates fundamental security auditing techniques used by cybersecurity professionals to assess cloud infrastructure. The skills learned here apply to real-world security operations, compliance monitoring, and incident response scenarios.
+
+Key Takeaways:
+
+Configuration analysis identifies misconfigurations before exploitation
+Log analysis detects active security threats
+Automated auditing improves consistency and coverage
+Compliance scoring helps prioritize remediation efforts
