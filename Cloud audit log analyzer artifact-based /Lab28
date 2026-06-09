@@ -1,0 +1,538 @@
+ Cloud Audit Log Analyzer
+Prerequisites
+Basic Linux command line knowledge
+Understanding of file operations (reading, writing)
+Familiarity with text editors (nano or vi)
+Basic understanding of JSON format
+Python 3.x fundamentals (variables, functions, loops)
+Learning Objectives
+By completing this lab, you will:
+
+Parse and analyze cloud audit log files
+Identify security misconfigurations in audit logs
+Detect risky actions and suspicious activities
+Generate security reports from log data
+Understand common cloud security threats
+Environment Setup
+Step 1: Verify Python Installation
+python3 --version
+Expected output: Python 3.8 or higher
+
+Step 2: Install Required Python Libraries
+pip3 install --user colorama
+Step 3: Create Lab Directory
+mkdir -p ~/cloud-audit-lab
+cd ~/cloud-audit-lab
+Task 1: Create Sample Audit Logs
+Step 1.1: Generate Sample Log File
+Create a file with sample cloud audit logs that simulate real-world scenarios:
+
+nano sample_audit_logs.json
+Copy and paste the following sample logs:
+
+[
+  {
+    "timestamp": "2024-01-15T10:23:45Z",
+    "user": "admin@company.com",
+    "action": "CreateUser",
+    "resource": "IAM",
+    "source_ip": "203.0.113.45",
+    "status": "SUCCESS",
+    "details": {"username": "newuser", "permissions": "Administrator"}
+  },
+  {
+    "timestamp": "2024-01-15T10:25:12Z",
+    "user": "developer@company.com",
+    "action": "ModifySecurityGroup",
+    "resource": "Network",
+    "source_ip": "198.51.100.23",
+    "status": "SUCCESS",
+    "details": {"rule": "Allow 0.0.0.0/0 on port 22"}
+  },
+  {
+    "timestamp": "2024-01-15T10:30:00Z",
+    "user": "admin@company.com",
+    "action": "DisableEncryption",
+    "resource": "Storage",
+    "source_ip": "203.0.113.45",
+    "status": "SUCCESS",
+    "details": {"bucket": "sensitive-data-bucket"}
+  },
+  {
+    "timestamp": "2024-01-15T11:15:33Z",
+    "user": "unknown@external.com",
+    "action": "ListBuckets",
+    "resource": "Storage",
+    "source_ip": "192.0.2.100",
+    "status": "FAILED",
+    "details": {"reason": "Access Denied"}
+  },
+  {
+    "timestamp": "2024-01-15T11:20:00Z",
+    "user": "developer@company.com",
+    "action": "DeleteBackup",
+    "resource": "Storage",
+    "source_ip": "198.51.100.23",
+    "status": "SUCCESS",
+    "details": {"backup_id": "backup-2024-01-14"}
+  },
+  {
+    "timestamp": "2024-01-15T12:00:00Z",
+    "user": "admin@company.com",
+    "action": "ModifyLogging",
+    "resource": "Monitoring",
+    "source_ip": "203.0.113.45",
+    "status": "SUCCESS",
+    "details": {"action": "disable", "service": "audit-logs"}
+  },
+  {
+    "timestamp": "2024-01-15T14:30:00Z",
+    "user": "contractor@company.com",
+    "action": "AccessDatabase",
+    "resource": "Database",
+    "source_ip": "203.0.113.99",
+    "status": "SUCCESS",
+    "details": {"database": "production-db", "time": "02:30 AM"}
+  },
+  {
+    "timestamp": "2024-01-15T15:00:00Z",
+    "user": "admin@company.com",
+    "action": "CreateAccessKey",
+    "resource": "IAM",
+    "source_ip": "203.0.113.45",
+    "status": "SUCCESS",
+    "details": {"key_id": "AKIAIOSFODNN7EXAMPLE", "expiry": "never"}
+  }
+]
+Save and exit (Ctrl+X, then Y, then Enter).
+
+Task 2: Build the Audit Log Analyzer
+Step 2.1: Create the Analyzer Script
+nano audit_analyzer.py
+Step 2.2: Import Required Libraries
+Add the following code to start your analyzer:
+
+#!/usr/bin/env python3
+"""
+Cloud Audit Log Analyzer
+Analyzes cloud audit logs for security issues and risky actions
+"""
+
+import json
+import sys
+from datetime import datetime
+from collections import defaultdict
+
+try:
+    from colorama import Fore, Style, init
+    init(autoreset=True)
+    COLORS_AVAILABLE = True
+except ImportError:
+    COLORS_AVAILABLE = False
+    print("Note: Install colorama for colored output")
+
+# Security rules configuration
+RISKY_ACTIONS = [
+    'DisableEncryption',
+    'ModifyLogging',
+    'DeleteBackup',
+    'CreateAccessKey',
+    'DisableMFA'
+]
+
+MISCONFIGURATION_PATTERNS = {
+    'open_ssh': '0.0.0.0/0 on port 22',
+    'open_rdp': '0.0.0.0/0 on port 3389',
+    'public_access': 'public-read',
+    'no_encryption': 'encryption: false'
+}
+
+def load_audit_logs(filename):
+    """
+    Load audit logs from JSON file
+    
+    Args:
+        filename: Path to the JSON log file
+    
+    Returns:
+        List of log entries
+    """
+    # TODO: Open and read the JSON file
+    # TODO: Parse JSON content and return as list
+    # TODO: Handle file not found errors
+    pass
+
+def analyze_risky_actions(logs):
+    """
+    Detect risky actions in audit logs
+    
+    Args:
+        logs: List of log entries
+    
+    Returns:
+        List of risky action findings
+    """
+    findings = []
+    
+    # TODO: Loop through each log entry
+    # TODO: Check if action is in RISKY_ACTIONS list
+    # TODO: Create finding dictionary with details
+    # TODO: Add finding to findings list
+    
+    return findings
+
+def detect_misconfigurations(logs):
+    """
+    Detect security misconfigurations
+    
+    Args:
+        logs: List of log entries
+    
+    Returns:
+        List of misconfiguration findings
+    """
+    findings = []
+    
+    # TODO: Loop through each log entry
+    # TODO: Check details field for misconfiguration patterns
+    # TODO: Create finding dictionary for each issue
+    # TODO: Add to findings list
+    
+    return findings
+
+def detect_suspicious_activity(logs):
+    """
+    Detect suspicious activities like failed access attempts
+    and unusual access times
+    
+    Args:
+        logs: List of log entries
+    
+    Returns:
+        List of suspicious activity findings
+    """
+    findings = []
+    
+    # TODO: Check for FAILED status entries
+    # TODO: Check for access during unusual hours (e.g., 12 AM - 5 AM)
+    # TODO: Check for external/unknown users
+    # TODO: Create findings for each suspicious activity
+    
+    return findings
+
+def generate_report(logs, risky_actions, misconfigs, suspicious):
+    """
+    Generate a comprehensive security report
+    
+    Args:
+        logs: Original log entries
+        risky_actions: List of risky action findings
+        misconfigs: List of misconfiguration findings
+        suspicious: List of suspicious activity findings
+    """
+    # TODO: Print report header
+    # TODO: Display summary statistics
+    # TODO: List all risky actions found
+    # TODO: List all misconfigurations found
+    # TODO: List all suspicious activities found
+    # TODO: Provide recommendations
+    pass
+
+def main():
+    """Main execution function"""
+    # TODO: Check command line arguments
+    # TODO: Load audit logs from file
+    # TODO: Run all analysis functions
+    # TODO: Generate and display report
+    pass
+
+if __name__ == "__main__":
+    main()
+Step 2.3: Implement the load_audit_logs Function
+Replace the load_audit_logs function with:
+
+def load_audit_logs(filename):
+    """Load audit logs from JSON file"""
+    try:
+        with open(filename, 'r') as f:
+            logs = json.load(f)
+        print(f"[+] Loaded {len(logs)} log entries from {filename}")
+        return logs
+    except FileNotFoundError:
+        print(f"[!] Error: File '{filename}' not found")
+        sys.exit(1)
+    except json.JSONDecodeError:
+        print(f"[!] Error: Invalid JSON format in '{filename}'")
+        sys.exit(1)
+Step 2.4: Implement the analyze_risky_actions Function
+Replace the analyze_risky_actions function with:
+
+def analyze_risky_actions(logs):
+    """Detect risky actions in audit logs"""
+    findings = []
+    
+    for log in logs:
+        action = log.get('action', '')
+        if action in RISKY_ACTIONS:
+            finding = {
+                'severity': 'HIGH',
+                'type': 'Risky Action',
+                'timestamp': log.get('timestamp'),
+                'user': log.get('user'),
+                'action': action,
+                'resource': log.get('resource'),
+                'details': log.get('details', {})
+            }
+            findings.append(finding)
+    
+    return findings
+Step 2.5: Implement the detect_misconfigurations Function
+Replace the detect_misconfigurations function with:
+
+def detect_misconfigurations(logs):
+    """Detect security misconfigurations"""
+    findings = []
+    
+    for log in logs:
+        details_str = json.dumps(log.get('details', {}))
+        
+        for config_name, pattern in MISCONFIGURATION_PATTERNS.items():
+            if pattern in details_str:
+                finding = {
+                    'severity': 'CRITICAL',
+                    'type': 'Misconfiguration',
+                    'timestamp': log.get('timestamp'),
+                    'user': log.get('user'),
+                    'action': log.get('action'),
+                    'issue': config_name.replace('_', ' ').title(),
+                    'details': log.get('details', {})
+                }
+                findings.append(finding)
+    
+    return findings
+Step 2.6: Implement the detect_suspicious_activity Function
+Replace the detect_suspicious_activity function with:
+
+def detect_suspicious_activity(logs):
+    """Detect suspicious activities"""
+    findings = []
+    
+    for log in logs:
+        # Check for failed access attempts
+        if log.get('status') == 'FAILED':
+            finding = {
+                'severity': 'MEDIUM',
+                'type': 'Suspicious Activity',
+                'timestamp': log.get('timestamp'),
+                'user': log.get('user'),
+                'action': log.get('action'),
+                'issue': 'Failed Access Attempt',
+                'source_ip': log.get('source_ip'),
+                'details': log.get('details', {})
+            }
+            findings.append(finding)
+        
+        # Check for unusual access times (example: between 2-5 AM)
+        timestamp = log.get('timestamp', '')
+        if 'T02:' in timestamp or 'T03:' in timestamp or 'T04:' in timestamp:
+            finding = {
+                'severity': 'MEDIUM',
+                'type': 'Suspicious Activity',
+                'timestamp': timestamp,
+                'user': log.get('user'),
+                'action': log.get('action'),
+                'issue': 'Unusual Access Time',
+                'details': log.get('details', {})
+            }
+            findings.append(finding)
+        
+        # Check for external/unknown users
+        user = log.get('user', '')
+        if 'external' in user or 'unknown' in user:
+            finding = {
+                'severity': 'HIGH',
+                'type': 'Suspicious Activity',
+                'timestamp': log.get('timestamp'),
+                'user': user,
+                'action': log.get('action'),
+                'issue': 'External User Activity',
+                'source_ip': log.get('source_ip'),
+                'details': log.get('details', {})
+            }
+            findings.append(finding)
+    
+    return findings
+Step 2.7: Implement the generate_report Function
+Replace the generate_report function with:
+
+def generate_report(logs, risky_actions, misconfigs, suspicious):
+    """Generate a comprehensive security report"""
+    
+    print("\n" + "="*70)
+    print("           CLOUD AUDIT LOG SECURITY ANALYSIS REPORT")
+    print("="*70)
+    
+    # Summary statistics
+    print(f"\n[SUMMARY]")
+    print(f"Total Log Entries Analyzed: {len(logs)}")
+    print(f"Risky Actions Found: {len(risky_actions)}")
+    print(f"Misconfigurations Found: {len(misconfigs)}")
+    print(f"Suspicious Activities Found: {len(suspicious)}")
+    
+    total_issues = len(risky_actions) + len(misconfigs) + len(suspicious)
+    print(f"\nTotal Security Issues: {total_issues}")
+    
+    # Risky Actions
+    if risky_actions:
+        print(f"\n{'='*70}")
+        print("[RISKY ACTIONS DETECTED]")
+        print('='*70)
+        for idx, finding in enumerate(risky_actions, 1):
+            print(f"\n{idx}. {finding['action']}")
+            print(f"   Severity: {finding['severity']}")
+            print(f"   User: {finding['user']}")
+            print(f"   Time: {finding['timestamp']}")
+            print(f"   Resource: {finding['resource']}")
+            print(f"   Details: {finding['details']}")
+    
+    # Misconfigurations
+    if misconfigs:
+        print(f"\n{'='*70}")
+        print("[SECURITY MISCONFIGURATIONS]")
+        print('='*70)
+        for idx, finding in enumerate(misconfigs, 1):
+            print(f"\n{idx}. {finding['issue']}")
+            print(f"   Severity: {finding['severity']}")
+            print(f"   User: {finding['user']}")
+            print(f"   Action: {finding['action']}")
+            print(f"   Time: {finding['timestamp']}")
+            print(f"   Details: {finding['details']}")
+    
+    # Suspicious Activities
+    if suspicious:
+        print(f"\n{'='*70}")
+        print("[SUSPICIOUS ACTIVITIES]")
+        print('='*70)
+        for idx, finding in enumerate(suspicious, 1):
+            print(f"\n{idx}. {finding['issue']}")
+            print(f"   Severity: {finding['severity']}")
+            print(f"   User: {finding['user']}")
+            print(f"   Action: {finding['action']}")
+            print(f"   Time: {finding['timestamp']}")
+            if 'source_ip' in finding:
+                print(f"   Source IP: {finding['source_ip']}")
+    
+    # Recommendations
+    print(f"\n{'='*70}")
+    print("[RECOMMENDATIONS]")
+    print('='*70)
+    if misconfigs:
+        print("\n- Review and restrict security group rules")
+        print("- Enable encryption for all storage resources")
+    if risky_actions:
+        print("- Implement approval workflows for sensitive actions")
+        print("- Enable MFA for administrative accounts")
+        print("- Review and rotate access keys regularly")
+    if suspicious:
+        print("- Investigate failed access attempts")
+        print("- Monitor unusual access patterns")
+        print("- Restrict access from unknown sources")
+    
+    print("\n" + "="*70 + "\n")
+Step 2.8: Implement the main Function
+Replace the main function with:
+
+def main():
+    """Main execution function"""
+    print("\n=== Cloud Audit Log Analyzer ===\n")
+    
+    # Check command line arguments
+    if len(sys.argv) < 2:
+        print("Usage: python3 audit_analyzer.py <log_file.json>")
+        print("Example: python3 audit_analyzer.py sample_audit_logs.json")
+        sys.exit(1)
+    
+    log_file = sys.argv[1]
+    
+    # Load audit logs
+    logs = load_audit_logs(log_file)
+    
+    # Run analysis
+    print("\n[*] Analyzing logs for security issues...")
+    risky_actions = analyze_risky_actions(logs)
+    misconfigs = detect_misconfigurations(logs)
+    suspicious = detect_suspicious_activity(logs)
+    
+    # Generate report
+    generate_report(logs, risky_actions, misconfigs, suspicious)
+Save and exit (Ctrl+X, then Y, then Enter).
+
+Step 2.9: Make the Script Executable
+chmod +x audit_analyzer.py
+Verification
+Step 1: Run the Analyzer
+python3 audit_analyzer.py sample_audit_logs.json
+Step 2: Verify Output
+Your output should include:
+
+Summary showing total log entries analyzed
+List of risky actions (should find 4 risky actions)
+List of misconfigurations (should find 1 misconfiguration)
+List of suspicious activities (should find 2 suspicious activities)
+Security recommendations
+Step 3: Test with Custom Logs
+Create a new log file to test:
+
+nano test_logs.json
+Add a simple test case:
+
+[
+  {
+    "timestamp": "2024-01-16T03:00:00Z",
+    "user": "testuser@company.com",
+    "action": "DisableMFA",
+    "resource": "IAM",
+    "source_ip": "10.0.0.1",
+    "status": "SUCCESS",
+    "details": {"account": "admin-account"}
+  }
+]
+Run the analyzer on the test file:
+
+python3 audit_analyzer.py test_logs.json
+Step 4: Verify Detection Capabilities
+Confirm the analyzer correctly identifies:
+
+Risky action: DisableMFA
+Unusual access time: 3:00 AM
+Appropriate severity levels
+Troubleshooting Tips
+Issue: "Module not found" error for colorama
+
+Solution: The script works without colorama, but install it for better output: pip3 install --user colorama
+Issue: "File not found" error
+
+Solution: Ensure you're in the correct directory (~/cloud-audit-lab) and the JSON file exists
+Issue: JSON decode error
+
+Solution: Validate your JSON syntax using: python3 -m json.tool sample_audit_logs.json
+Issue: No findings detected
+
+Solution: Check that your log entries match the expected format with required fields (action, user, timestamp, etc.)
+Conclusion
+You have successfully built a cloud audit log analyzer that:
+
+Parses JSON-formatted audit logs
+Identifies risky security actions
+Detects common misconfigurations
+Flags suspicious activities
+Generates comprehensive security reports
+This tool demonstrates fundamental security analysis techniques used by cybersecurity professionals to monitor cloud environments. The analyzer can be extended with additional rules, patterns, and detection logic to cover more security scenarios.
+
+Key Takeaways:
+
+Audit logs are critical for security monitoring
+Automated analysis helps identify issues quickly
+Pattern matching can detect common misconfigurations
+Security monitoring requires continuous vigilance
+Next Steps: Enhance the analyzer by adding more detection rules, implementing log aggregation from multiple sources, or integrating with alerting systems.
