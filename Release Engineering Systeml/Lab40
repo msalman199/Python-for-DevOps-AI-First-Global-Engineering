@@ -1,0 +1,391 @@
+Release Engineering System
+Prerequisites
+Basic Linux command line knowledge
+Understanding of Git version control
+Familiarity with shell scripting
+Basic understanding of software development lifecycle
+Experience with package managers (apt/yum)
+Learning Objectives
+By completing this lab, you will:
+
+Implement automated build processes for software releases
+Create and manage semantic versioning for releases
+Generate automated release notes from commit history
+Establish a standardized release workflow
+Environment Setup
+You will work on a single Linux machine provided by Al Nafi. Click the "Start Lab" button to access your environment.
+
+Install Required Tools
+# Update package manager
+sudo apt update
+
+# Install Git
+sudo apt install -y git
+
+# Install Python and pip
+sudo apt install -y python3 python3-pip
+
+# Install Node.js and npm (for semantic-release)
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Verify installations
+git --version
+python3 --version
+node --version
+npm --version
+Task 1: Create a Sample Application and Automated Build System
+Step 1: Set Up Project Structure
+# Create project directory
+mkdir ~/release-demo
+cd ~/release-demo
+
+# Initialize Git repository
+git init
+git config user.name "DevOps Engineer"
+git config user.email "devops@example.com"
+
+# Create project structure
+mkdir -p src tests scripts
+Step 2: Create Sample Application
+Create a simple Python application:
+
+cat > src/app.py << 'EOF'
+#!/usr/bin/env python3
+"""
+Sample application for release engineering demo
+"""
+
+__version__ = "0.0.0"
+
+def greet(name):
+    """Return a greeting message"""
+    return f"Hello, {name}! Version: {__version__}"
+
+def calculate(a, b):
+    """Add two numbers"""
+    return a + b
+
+if __name__ == "__main__":
+    print(greet("World"))
+    print(f"2 + 2 = {calculate(2, 2)}")
+EOF
+
+chmod +x src/app.py
+Create a test file:
+
+cat > tests/test_app.py << 'EOF'
+import sys
+sys.path.insert(0, 'src')
+from app import greet, calculate
+
+def test_greet():
+    result = greet("Test")
+    assert "Hello, Test!" in result
+    print("✓ Greet test passed")
+
+def test_calculate():
+    assert calculate(2, 3) == 5
+    print("✓ Calculate test passed")
+
+if __name__ == "__main__":
+    test_greet()
+    test_calculate()
+    print("\nAll tests passed!")
+EOF
+Step 3: Create Automated Build Script
+cat > scripts/build.sh << 'EOF'
+#!/bin/bash
+# Automated build script
+
+set -e
+
+echo "=== Starting Build Process ==="
+
+# TODO: Add build timestamp
+BUILD_TIME=$(date '+%Y-%m-%d %H:%M:%S')
+echo "Build Time: $BUILD_TIME"
+
+# TODO: Run tests
+echo "Running tests..."
+python3 tests/test_app.py
+
+# TODO: Create build directory
+BUILD_DIR="build/release-$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$BUILD_DIR"
+
+# TODO: Copy application files
+echo "Packaging application..."
+cp src/app.py "$BUILD_DIR/"
+
+# TODO: Create build metadata
+cat > "$BUILD_DIR/build-info.txt" << BUILDEOF
+Build Date: $BUILD_TIME
+Git Commit: $(git rev-parse --short HEAD 2>/dev/null || echo "N/A")
+Version: $(grep __version__ src/app.py | cut -d'"' -f2)
+BUILDEOF
+
+echo "Build completed: $BUILD_DIR"
+echo "=== Build Process Complete ==="
+EOF
+
+chmod +x scripts/build.sh
+Step 4: Test the Build System
+# Make initial commit
+git add .
+git commit -m "Initial commit: Add sample application"
+
+# Run build
+./scripts/build.sh
+
+# Verify build output
+ls -la build/
+cat build/*/build-info.txt
+Task 2: Implement Versioning and Release Notes System
+Step 1: Create Version Management Script
+cat > scripts/version.sh << 'EOF'
+#!/bin/bash
+# Version management script
+
+VERSION_FILE="src/app.py"
+CURRENT_VERSION=$(grep __version__ "$VERSION_FILE" | cut -d'"' -f2)
+
+function get_version() {
+    echo "$CURRENT_VERSION"
+}
+
+function bump_version() {
+    local bump_type=$1
+    IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
+    
+    case $bump_type in
+        major)
+            major=$((major + 1))
+            minor=0
+            patch=0
+            ;;
+        minor)
+            minor=$((minor + 1))
+            patch=0
+            ;;
+        patch)
+            patch=$((patch + 1))
+            ;;
+        *)
+            echo "Usage: $0 {major|minor|patch}"
+            exit 1
+            ;;
+    esac
+    
+    NEW_VERSION="$major.$minor.$patch"
+    
+    # TODO: Update version in source file
+    sed -i "s/__version__ = \".*\"/__version__ = \"$NEW_VERSION\"/" "$VERSION_FILE"
+    
+    echo "Version bumped: $CURRENT_VERSION -> $NEW_VERSION"
+    echo "$NEW_VERSION"
+}
+
+case "${1:-get}" in
+    get)
+        get_version
+        ;;
+    major|minor|patch)
+        bump_version "$1"
+        ;;
+    *)
+        echo "Usage: $0 {get|major|minor|patch}"
+        exit 1
+        ;;
+esac
+EOF
+
+chmod +x scripts/version.sh
+Step 2: Create Release Notes Generator
+cat > scripts/generate-release-notes.sh << 'EOF'
+#!/bin/bash
+# Generate release notes from git commits
+
+set -e
+
+VERSION=${1:-$(./scripts/version.sh get)}
+PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+OUTPUT_FILE="RELEASE_NOTES_${VERSION}.md"
+
+echo "Generating release notes for version $VERSION..."
+
+# TODO: Create release notes header
+cat > "$OUTPUT_FILE" << HEADER
+# Release Notes - Version $VERSION
+
+**Release Date:** $(date '+%Y-%m-%d')
+
+## Changes
+
+HEADER
+
+# TODO: Extract commits since last tag
+if [ -n "$PREVIOUS_TAG" ]; then
+    echo "Changes since $PREVIOUS_TAG:" >> "$OUTPUT_FILE"
+    echo "" >> "$OUTPUT_FILE"
+    
+    # Categorize commits
+    echo "### Features" >> "$OUTPUT_FILE"
+    git log "$PREVIOUS_TAG"..HEAD --pretty=format:"- %s (%h)" --grep="^feat" >> "$OUTPUT_FILE" 2>/dev/null || echo "- No new features" >> "$OUTPUT_FILE"
+    echo "" >> "$OUTPUT_FILE"
+    
+    echo "### Bug Fixes" >> "$OUTPUT_FILE"
+    git log "$PREVIOUS_TAG"..HEAD --pretty=format:"- %s (%h)" --grep="^fix" >> "$OUTPUT_FILE" 2>/dev/null || echo "- No bug fixes" >> "$OUTPUT_FILE"
+    echo "" >> "$OUTPUT_FILE"
+    
+    echo "### Other Changes" >> "$OUTPUT_FILE"
+    git log "$PREVIOUS_TAG"..HEAD --pretty=format:"- %s (%h)" --grep="^feat" --grep="^fix" --invert-grep >> "$OUTPUT_FILE" 2>/dev/null || true
+else
+    echo "Initial release - all commits:" >> "$OUTPUT_FILE"
+    git log --pretty=format:"- %s (%h)" >> "$OUTPUT_FILE"
+fi
+
+echo "" >> "$OUTPUT_FILE"
+echo "---" >> "$OUTPUT_FILE"
+echo "**Full Changelog:** https://github.com/yourorg/yourrepo/compare/${PREVIOUS_TAG}...v${VERSION}" >> "$OUTPUT_FILE"
+
+echo "Release notes generated: $OUTPUT_FILE"
+cat "$OUTPUT_FILE"
+EOF
+
+chmod +x scripts/generate-release-notes.sh
+Step 3: Create Complete Release Script
+cat > scripts/release.sh << 'EOF'
+#!/bin/bash
+# Complete release automation script
+
+set -e
+
+RELEASE_TYPE=${1:-patch}
+
+echo "=== Starting Release Process ==="
+echo "Release Type: $RELEASE_TYPE"
+
+# TODO: Bump version
+echo "Step 1: Bumping version..."
+NEW_VERSION=$(./scripts/version.sh "$RELEASE_TYPE")
+
+# TODO: Run build
+echo "Step 2: Running build..."
+./scripts/build.sh
+
+# TODO: Commit version change
+echo "Step 3: Committing version change..."
+git add src/app.py
+git commit -m "chore: bump version to $NEW_VERSION"
+
+# TODO: Create git tag
+echo "Step 4: Creating git tag..."
+git tag -a "v$NEW_VERSION" -m "Release version $NEW_VERSION"
+
+# TODO: Generate release notes
+echo "Step 5: Generating release notes..."
+./scripts/generate-release-notes.sh "$NEW_VERSION"
+
+# TODO: Create release package
+echo "Step 6: Creating release package..."
+RELEASE_DIR="releases/v$NEW_VERSION"
+mkdir -p "$RELEASE_DIR"
+cp -r build/release-*/* "$RELEASE_DIR/"
+cp "RELEASE_NOTES_${NEW_VERSION}.md" "$RELEASE_DIR/"
+
+echo ""
+echo "=== Release Complete ==="
+echo "Version: $NEW_VERSION"
+echo "Tag: v$NEW_VERSION"
+echo "Release Package: $RELEASE_DIR"
+echo ""
+echo "Next steps:"
+echo "  - Review release notes: cat RELEASE_NOTES_${NEW_VERSION}.md"
+echo "  - Push to remote: git push origin main --tags"
+EOF
+
+chmod +x scripts/release.sh
+Step 4: Execute Release Workflow
+# Create some feature commits
+echo "# Add new feature" >> src/app.py
+git add src/app.py
+git commit -m "feat: add new feature placeholder"
+
+echo "# Fix bug" >> src/app.py
+git add src/app.py
+git commit -m "fix: resolve calculation issue"
+
+# Create a patch release
+./scripts/release.sh patch
+
+# Verify release artifacts
+ls -la releases/
+cat RELEASE_NOTES_*.md
+
+# View git tags
+git tag -l
+git log --oneline --decorate
+Verification
+Verify Build System
+# Check build artifacts exist
+test -d build && echo "✓ Build directory exists" || echo "✗ Build failed"
+
+# Check build contains application
+test -f build/release-*/app.py && echo "✓ Application packaged" || echo "✗ Package missing"
+
+# Check build metadata
+test -f build/release-*/build-info.txt && echo "✓ Build metadata created" || echo "✗ Metadata missing"
+Verify Versioning
+# Check version was updated
+CURRENT_VERSION=$(./scripts/version.sh get)
+echo "Current version: $CURRENT_VERSION"
+test "$CURRENT_VERSION" != "0.0.0" && echo "✓ Version bumped" || echo "✗ Version not updated"
+
+# Check git tag exists
+git tag -l | grep -q "v$CURRENT_VERSION" && echo "✓ Git tag created" || echo "✗ Tag missing"
+Verify Release Notes
+# Check release notes file exists
+test -f RELEASE_NOTES_*.md && echo "✓ Release notes generated" || echo "✗ Release notes missing"
+
+# Check release package
+CURRENT_VERSION=$(./scripts/version.sh get)
+test -d "releases/v$CURRENT_VERSION" && echo "✓ Release package created" || echo "✗ Package missing"
+
+# Display release summary
+echo ""
+echo "=== Release Summary ==="
+echo "Version: $CURRENT_VERSION"
+echo "Releases created:"
+ls -la releases/
+Troubleshooting
+Build fails with permission denied:
+
+Ensure scripts are executable: chmod +x scripts/*.sh
+Version not updating:
+
+Check sed syntax for your system (BSD vs GNU)
+Verify VERSION_FILE path in version.sh
+Git tag already exists:
+
+Delete existing tag: git tag -d v0.0.1
+Or use different version bump type
+Release notes empty:
+
+Ensure commits follow conventional format (feat:, fix:)
+Check git log output: git log --oneline
+Conclusion
+You have successfully implemented a release engineering system that:
+
+Automates the build process with testing and packaging
+Manages semantic versioning with automated version bumping
+Generates release notes from git commit history
+Creates standardized release packages with metadata
+This system provides a foundation for DevOps practices including continuous integration, version control, and release management. In production environments, these scripts would integrate with CI/CD pipelines (Jenkins, GitLab CI, GitHub Actions) and artifact repositories.
+
+Key Takeaways:
+
+Automated builds ensure consistency and reduce human error
+Semantic versioning communicates change impact clearly
+Generated release notes improve transparency and documentation
+Standardized processes enable reliable, repeatable releases
