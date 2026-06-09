@@ -1,0 +1,301 @@
+Local Object Storage Exposure Simulator
+Prerequisites
+Basic Linux command line knowledge
+Understanding of file permissions
+Familiarity with web browsers
+No prior cloud storage experience required
+Learning Objectives
+By completing this lab, you will:
+
+Understand how misconfigured object storage can expose sensitive data
+Learn to simulate a local object storage service
+Identify public access vulnerabilities
+Practice detecting and verifying storage exposure risks
+Environment Setup
+Al Nafi provides a bare-metal Linux machine. You'll install all required tools during this lab.
+
+Tools We'll Install:
+MinIO: Open-source object storage server (S3-compatible)
+MinIO Client (mc): Command-line tool for managing storage
+curl: For testing HTTP access
+Task 1: Install and Configure MinIO Object Storage
+Step 1: Download and Install MinIO Server
+# Download MinIO server binary
+wget https://dl.min.io/server/minio/release/linux-amd64/minio
+chmod +x minio
+sudo mv minio /usr/local/bin/
+
+# Verify installation
+minio --version
+Step 2: Create Storage Directory
+# Create directory for object storage
+mkdir -p ~/minio-storage/data
+
+# Create a directory for sensitive data simulation
+mkdir -p ~/sensitive-data
+Step 3: Create Sample Sensitive Files
+# Create simulated sensitive files
+cat > ~/sensitive-data/customer-data.txt << 'EOF'
+Customer Database - CONFIDENTIAL
+================================
+ID: 1001, Name: John Doe, SSN: 123-45-6789, Email: john@example.com
+ID: 1002, Name: Jane Smith, SSN: 987-65-4321, Email: jane@example.com
+ID: 1003, Name: Bob Johnson, SSN: 555-12-3456, Email: bob@example.com
+EOF
+
+cat > ~/sensitive-data/api-keys.txt << 'EOF'
+API Keys - DO NOT SHARE
+=======================
+AWS_ACCESS_KEY: AKIAIOSFODNN7EXAMPLE
+AWS_SECRET_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+DATABASE_PASSWORD: SuperSecret123!
+EOF
+
+cat > ~/sensitive-data/financial-report.txt << 'EOF'
+Q4 Financial Report - INTERNAL ONLY
+====================================
+Revenue: $5,234,567
+Expenses: $3,456,789
+Net Profit: $1,777,778
+Projected Growth: 23%
+EOF
+Step 4: Start MinIO Server with Public Access (Misconfigured)
+# Start MinIO server in background
+# Default credentials: minioadmin / minioadmin
+MINIO_ROOT_USER=minioadmin MINIO_ROOT_PASSWORD=minioadmin \
+minio server ~/minio-storage/data --console-address ":9001" &
+
+# Wait for server to start
+sleep 5
+
+# Check if MinIO is running
+ps aux | grep minio
+Expected Output: You should see the MinIO process running.
+
+Step 5: Access MinIO Console
+Open a new terminal and note the server address:
+
+# MinIO runs on port 9000 (API) and 9001 (Console)
+echo "MinIO Console: http://localhost:9001"
+echo "MinIO API: http://localhost:9000"
+Task 2: Configure Misconfigured Storage Buckets
+Step 1: Install MinIO Client
+# Download MinIO client
+wget https://dl.min.io/client/mc/release/linux-amd64/mc
+chmod +x mc
+sudo mv mc /usr/local/bin/
+
+# Verify installation
+mc --version
+Step 2: Configure MinIO Client Connection
+# Add MinIO server as an alias
+mc alias set localminio http://localhost:9000 minioadmin minioadmin
+
+# Verify connection
+mc admin info localminio
+Step 3: Create Buckets with Different Access Levels
+# Create a private bucket (correct configuration)
+mc mb localminio/private-bucket
+
+# Create a public bucket (MISCONFIGURED - security risk!)
+mc mb localminio/public-bucket
+
+# Create another public bucket for testing
+mc mb localminio/exposed-data
+Step 4: Upload Sensitive Files
+# Upload to private bucket
+mc cp ~/sensitive-data/customer-data.txt localminio/private-bucket/
+
+# Upload to public buckets (MISCONFIGURATION!)
+mc cp ~/sensitive-data/api-keys.txt localminio/public-bucket/
+mc cp ~/sensitive-data/financial-report.txt localminio/exposed-data/
+Step 5: Apply Misconfigured Public Access Policies
+# Set public read access (DANGEROUS!)
+mc anonymous set download localminio/public-bucket
+
+# Set public read access to exposed-data bucket
+mc anonymous set download localminio/exposed-data
+
+# Verify bucket policies
+mc anonymous list localminio/public-bucket
+mc anonymous list localminio/exposed-data
+mc anonymous list localminio/private-bucket
+Expected Output:
+
+public-bucket and exposed-data should show "download" access
+private-bucket should show no anonymous access
+Task 3: Detect and Verify Public Access Exposure
+Step 1: List All Buckets and Check Policies
+# List all buckets
+mc ls localminio/
+
+# Check each bucket's policy
+echo "=== Checking Bucket Policies ==="
+for bucket in private-bucket public-bucket exposed-data; do
+    echo "Bucket: $bucket"
+    mc anonymous list localminio/$bucket
+    echo "---"
+done
+Step 2: Test Public Access Without Authentication
+# Try to access public bucket files without credentials
+echo "=== Testing Public Access ==="
+
+# This should SUCCEED (security issue!)
+curl -I http://localhost:9000/public-bucket/api-keys.txt
+
+# Download the exposed file
+curl http://localhost:9000/public-bucket/api-keys.txt
+
+# Test exposed-data bucket
+curl http://localhost:9000/exposed-data/financial-report.txt
+Step 3: Test Private Bucket Access
+# This should FAIL (correct behavior)
+echo "=== Testing Private Bucket ==="
+curl -I http://localhost:9000/private-bucket/customer-data.txt
+Expected Output:
+
+Public buckets return HTTP 200 and file contents
+Private bucket returns HTTP 403 (Access Denied)
+Step 4: Create Detection Script
+Create a simple script to scan for exposed storage:
+
+cat > ~/storage-scanner.sh << 'EOF'
+#!/bin/bash
+# Simple Object Storage Exposure Scanner
+
+echo "==================================="
+echo "Storage Exposure Detection Scanner"
+echo "==================================="
+echo ""
+
+MINIO_HOST="http://localhost:9000"
+BUCKETS=("private-bucket" "public-bucket" "exposed-data")
+
+for bucket in "${BUCKETS[@]}"; do
+    echo "Scanning bucket: $bucket"
+    
+    # Try to list bucket contents
+    response=$(curl -s -o /dev/null -w "%{http_code}" "$MINIO_HOST/$bucket/")
+    
+    if [ "$response" == "200" ] || [ "$response" == "403" ]; then
+        # Try to access a known file
+        mc ls localminio/$bucket/ 2>/dev/null | while read -r line; do
+            filename=$(echo $line | awk '{print $NF}')
+            if [ ! -z "$filename" ]; then
+                file_response=$(curl -s -o /dev/null -w "%{http_code}" "$MINIO_HOST/$bucket/$filename")
+                if [ "$file_response" == "200" ]; then
+                    echo "  [EXPOSED] $filename is publicly accessible!"
+                else
+                    echo "  [SECURE] $filename is protected"
+                fi
+            fi
+        done
+    fi
+    echo ""
+done
+
+echo "==================================="
+echo "Scan Complete"
+echo "==================================="
+EOF
+
+chmod +x ~/storage-scanner.sh
+Step 5: Run the Detection Script
+# Execute the scanner
+~/storage-scanner.sh
+Step 6: Generate Exposure Report
+cat > ~/generate-report.sh << 'EOF'
+#!/bin/bash
+# Generate exposure report
+
+REPORT_FILE=~/exposure-report.txt
+
+echo "Object Storage Exposure Report" > $REPORT_FILE
+echo "Generated: $(date)" >> $REPORT_FILE
+echo "================================" >> $REPORT_FILE
+echo "" >> $REPORT_FILE
+
+# Check each bucket
+for bucket in private-bucket public-bucket exposed-data; do
+    echo "Bucket: $bucket" >> $REPORT_FILE
+    policy=$(mc anonymous list localminio/$bucket 2>/dev/null)
+    
+    if echo "$policy" | grep -q "download"; then
+        echo "  Status: EXPOSED - Public read access enabled" >> $REPORT_FILE
+        echo "  Risk Level: HIGH" >> $REPORT_FILE
+    else
+        echo "  Status: SECURE - No public access" >> $REPORT_FILE
+        echo "  Risk Level: LOW" >> $REPORT_FILE
+    fi
+    echo "" >> $REPORT_FILE
+done
+
+cat $REPORT_FILE
+EOF
+
+chmod +x ~/generate-report.sh
+~/generate-report.sh
+Verification
+Verify Your Lab Completion:
+Check MinIO is running:
+curl -I http://localhost:9000/minio/health/live
+Expected: HTTP 200 OK
+
+Verify buckets exist:
+mc ls localminio/
+Expected: Three buckets listed
+
+Confirm exposure detection:
+# Public bucket should be accessible
+curl -s http://localhost:9000/public-bucket/api-keys.txt | head -n 3
+
+# Private bucket should be blocked
+curl -I http://localhost:9000/private-bucket/customer-data.txt 2>&1 | grep "403"
+Review your report:
+cat ~/exposure-report.txt
+Cleanup (Optional)
+# Stop MinIO server
+pkill minio
+
+# Remove data (optional)
+rm -rf ~/minio-storage
+rm -rf ~/sensitive-data
+Troubleshooting Tips
+MinIO won't start:
+
+Check if port 9000 or 9001 is already in use: netstat -tuln | grep 900
+Kill existing process: pkill minio
+Cannot connect with mc client:
+
+Verify MinIO is running: ps aux | grep minio
+Check alias configuration: mc alias list
+Curl returns connection refused:
+
+Ensure MinIO server is running
+Verify correct port (9000 for API)
+Files not uploading:
+
+Check file paths exist: ls ~/sensitive-data/
+Verify bucket exists: mc ls localminio/
+Conclusion
+Congratulations! You've successfully completed the Local Object Storage Exposure Simulator lab.
+
+What You Accomplished:
+Set up a local object storage system using MinIO
+Created buckets with different access configurations
+Simulated a common misconfiguration (public read access)
+Detected exposed storage using command-line tools
+Generated an exposure report identifying security risks
+Key Takeaways:
+Misconfigured storage is a critical security risk: Public access to sensitive data can lead to data breaches
+Default settings matter: Always verify access policies before storing data
+Detection is essential: Regular scanning helps identify misconfigurations
+Principle of least privilege: Only grant necessary access permissions
+Real-World Significance:
+Object storage misconfigurations are among the most common cloud security issues, leading to major data breaches. Understanding how to identify and prevent these exposures is crucial for cybersecurity professionals. This lab simulates real-world scenarios where sensitive data becomes publicly accessible due to incorrect permissions.
+
+Next Steps:
+Practice securing exposed buckets by removing public access
+Learn about bucket policies and IAM roles
+Explore automated scanning tools for production environments
+Study incident response procedures for data exposure events
