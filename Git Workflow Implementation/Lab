@@ -1,0 +1,569 @@
+Git Workflow Implementation
+Prerequisites
+Basic Linux command line knowledge
+Understanding of file system navigation
+Familiarity with text editors (nano, vim, or vi)
+Basic understanding of version control concepts
+Completed introductory Git tutorial or equivalent experience
+Learning Objectives
+By the end of this lab, you will be able to:
+
+Initialize and configure a Git repository with proper settings
+Implement a feature branch workflow for parallel development
+Create, switch between, and manage multiple branches
+Merge branches and resolve merge conflicts
+Simulate and execute a pull request workflow locally
+Apply professional Git practices for team collaboration
+Environment Setup
+Install Git
+# Update package manager
+sudo apt update
+
+# Install Git
+sudo apt install git -y
+
+# Verify installation
+git --version
+Configure Git Identity
+# Set your name and email (required for commits)
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+
+# Verify configuration
+git config --global --list
+Task 1: Initialize Repository and Create Feature Branches
+Step 1: Create Project Structure
+# Create project directory
+mkdir ~/ecommerce-app
+cd ~/ecommerce-app
+
+# Initialize Git repository
+git init
+
+# Create initial project files
+touch README.md
+echo "# E-Commerce Application" > README.md
+echo "A simple product catalog system" >> README.md
+Step 2: Create Initial Commit
+# Create main application file
+cat > app.py << 'EOF'
+#!/usr/bin/env python3
+"""
+E-Commerce Product Catalog
+Main application entry point
+"""
+
+def main():
+    print("E-Commerce Application v1.0")
+    print("Product Catalog System")
+
+if __name__ == "__main__":
+    main()
+EOF
+
+# Stage and commit initial files
+git add README.md app.py
+git commit -m "Initial commit: Add README and main application file"
+
+# Verify commit
+git log --oneline
+Step 3: Create Feature Branches
+# Create and switch to feature branch for product search
+git checkout -b feature/product-search
+
+# Add search functionality (partial implementation)
+cat > search.py << 'EOF'
+#!/usr/bin/env python3
+"""
+Product Search Module
+TODO: Implement search algorithms
+"""
+
+class ProductSearch:
+    def __init__(self):
+        self.products = []
+    
+    def search_by_name(self, query):
+        """
+        Search products by name
+        
+        Args:
+            query: Search term
+        
+        Returns:
+            List of matching products
+        """
+        # TODO: Implement search logic
+        pass
+    
+    def search_by_category(self, category):
+        """
+        Search products by category
+        
+        Args:
+            category: Product category
+        
+        Returns:
+            List of products in category
+        """
+        # TODO: Implement category filter
+        pass
+
+if __name__ == "__main__":
+    searcher = ProductSearch()
+    print("Product Search Module Loaded")
+EOF
+
+# Commit search feature
+git add search.py
+git commit -m "Add product search module with search methods"
+
+# Return to main branch
+git checkout main
+
+# Create another feature branch for shopping cart
+git checkout -b feature/shopping-cart
+
+# Add cart functionality
+cat > cart.py << 'EOF'
+#!/usr/bin/env python3
+"""
+Shopping Cart Module
+TODO: Implement cart operations
+"""
+
+class ShoppingCart:
+    def __init__(self):
+        self.items = []
+        self.total = 0.0
+    
+    def add_item(self, product_id, quantity, price):
+        """
+        Add item to cart
+        
+        Args:
+            product_id: Unique product identifier
+            quantity: Number of items
+            price: Price per item
+        """
+        # TODO: Implement add logic
+        pass
+    
+    def remove_item(self, product_id):
+        """
+        Remove item from cart
+        
+        Args:
+            product_id: Product to remove
+        """
+        # TODO: Implement remove logic
+        pass
+    
+    def calculate_total(self):
+        """Calculate cart total"""
+        # TODO: Implement total calculation
+        pass
+
+if __name__ == "__main__":
+    cart = ShoppingCart()
+    print("Shopping Cart Module Loaded")
+EOF
+
+# Commit cart feature
+git add cart.py
+git commit -m "Add shopping cart module with cart operations"
+Step 4: View Branch Structure
+# List all branches
+git branch -a
+
+# View commit history across branches
+git log --all --graph --oneline --decorate
+Task 2: Merge Branches and Resolve Conflicts
+Step 1: Merge First Feature (Clean Merge)
+# Switch to main branch
+git checkout main
+
+# Merge product search feature
+git merge feature/product-search -m "Merge feature/product-search into main"
+
+# Verify merge
+git log --oneline -n 3
+ls -la
+Step 2: Create Conflicting Changes
+# On main branch, modify app.py
+cat > app.py << 'EOF'
+#!/usr/bin/env python3
+"""
+E-Commerce Product Catalog
+Main application entry point
+"""
+
+from search import ProductSearch
+
+def main():
+    print("E-Commerce Application v1.0")
+    print("Product Catalog System")
+    
+    # Initialize search
+    searcher = ProductSearch()
+    print("Search module initialized")
+
+if __name__ == "__main__":
+    main()
+EOF
+
+# Commit changes on main
+git add app.py
+git commit -m "Integrate search module into main app"
+
+# Switch to shopping cart branch
+git checkout feature/shopping-cart
+
+# Modify app.py differently on this branch
+cat > app.py << 'EOF'
+#!/usr/bin/env python3
+"""
+E-Commerce Product Catalog
+Main application entry point
+"""
+
+from cart import ShoppingCart
+
+def main():
+    print("E-Commerce Application v1.0")
+    print("Product Catalog System")
+    
+    # Initialize shopping cart
+    cart = ShoppingCart()
+    print("Shopping cart initialized")
+
+if __name__ == "__main__":
+    main()
+EOF
+
+# Commit changes on feature branch
+git add app.py
+git commit -m "Integrate shopping cart into main app"
+Step 3: Merge and Resolve Conflict
+# Switch back to main
+git checkout main
+
+# Attempt merge (this will create a conflict)
+git merge feature/shopping-cart
+
+# Check conflict status
+git status
+
+# View the conflict in app.py
+cat app.py
+Step 4: Manually Resolve Conflict
+# Edit app.py to resolve conflict
+cat > app.py << 'EOF'
+#!/usr/bin/env python3
+"""
+E-Commerce Product Catalog
+Main application entry point
+"""
+
+from search import ProductSearch
+from cart import ShoppingCart
+
+def main():
+    print("E-Commerce Application v1.0")
+    print("Product Catalog System")
+    
+    # Initialize search
+    searcher = ProductSearch()
+    print("Search module initialized")
+    
+    # Initialize shopping cart
+    cart = ShoppingCart()
+    print("Shopping cart initialized")
+
+if __name__ == "__main__":
+    main()
+EOF
+
+# Stage resolved file
+git add app.py
+
+# Complete the merge
+git commit -m "Merge feature/shopping-cart with conflict resolution"
+
+# Verify resolution
+git log --oneline --graph -n 5
+Task 3: Implement Pull Request Workflow
+Step 1: Create Feature Branch for Review
+# Create new feature branch
+git checkout -b feature/user-authentication
+
+# Create authentication module
+cat > auth.py << 'EOF'
+#!/usr/bin/env python3
+"""
+User Authentication Module
+Simulates PR workflow
+"""
+
+class UserAuth:
+    def __init__(self):
+        self.users = {}
+    
+    def register_user(self, username, password):
+        """
+        Register new user
+        
+        Args:
+            username: User's username
+            password: User's password
+        
+        Returns:
+            bool: Success status
+        """
+        # TODO: Implement registration
+        # TODO: Add password hashing
+        pass
+    
+    def login(self, username, password):
+        """
+        Authenticate user login
+        
+        Args:
+            username: User's username
+            password: User's password
+        
+        Returns:
+            bool: Authentication status
+        """
+        # TODO: Implement login verification
+        pass
+
+if __name__ == "__main__":
+    auth = UserAuth()
+    print("Authentication Module Loaded")
+EOF
+
+# Commit authentication feature
+git add auth.py
+git commit -m "Add user authentication module"
+Step 2: Simulate Code Review Process
+# Create a review notes file
+cat > REVIEW_NOTES.md << 'EOF'
+# Code Review for feature/user-authentication
+
+## Reviewer Comments:
+- [ ] Add input validation for username
+- [ ] Implement password strength requirements
+- [ ] Add error handling for duplicate users
+- [ ] Include unit tests
+
+## Status: Changes Requested
+EOF
+
+git add REVIEW_NOTES.md
+git commit -m "Add code review notes"
+
+# Make requested changes
+cat > auth.py << 'EOF'
+#!/usr/bin/env python3
+"""
+User Authentication Module
+Updated based on code review
+"""
+
+class UserAuth:
+    def __init__(self):
+        self.users = {}
+    
+    def validate_username(self, username):
+        """Validate username format"""
+        if len(username) < 3:
+            return False, "Username must be at least 3 characters"
+        return True, "Valid"
+    
+    def validate_password(self, password):
+        """Validate password strength"""
+        if len(password) < 8:
+            return False, "Password must be at least 8 characters"
+        return True, "Valid"
+    
+    def register_user(self, username, password):
+        """
+        Register new user with validation
+        
+        Args:
+            username: User's username
+            password: User's password
+        
+        Returns:
+            tuple: (success: bool, message: str)
+        """
+        # Validate inputs
+        valid, msg = self.validate_username(username)
+        if not valid:
+            return False, msg
+        
+        valid, msg = self.validate_password(password)
+        if not valid:
+            return False, msg
+        
+        # Check for duplicates
+        if username in self.users:
+            return False, "Username already exists"
+        
+        # TODO: Add password hashing before storage
+        self.users[username] = password
+        return True, "User registered successfully"
+    
+    def login(self, username, password):
+        """Authenticate user login"""
+        if username not in self.users:
+            return False, "User not found"
+        
+        if self.users[username] == password:
+            return True, "Login successful"
+        return False, "Invalid password"
+
+if __name__ == "__main__":
+    auth = UserAuth()
+    print("Authentication Module Loaded")
+EOF
+
+# Commit improvements
+git add auth.py
+git commit -m "Address code review feedback: Add validation and error handling"
+Step 3: Merge Feature After Approval
+# Update review notes
+cat > REVIEW_NOTES.md << 'EOF'
+# Code Review for feature/user-authentication
+
+## Reviewer Comments:
+- [x] Add input validation for username
+- [x] Implement password strength requirements
+- [x] Add error handling for duplicate users
+- [ ] Include unit tests (deferred to next sprint)
+
+## Status: Approved for Merge
+EOF
+
+git add REVIEW_NOTES.md
+git commit -m "Update review status: Approved"
+
+# Switch to main and merge
+git checkout main
+git merge feature/user-authentication -m "Merge feature/user-authentication after code review"
+
+# View final project structure
+ls -la
+git log --oneline --graph -n 8
+Step 4: Clean Up Merged Branches
+# List all branches
+git branch -a
+
+# Delete merged feature branches
+git branch -d feature/product-search
+git branch -d feature/shopping-cart
+git branch -d feature/user-authentication
+
+# Verify remaining branches
+git branch
+Verification
+Verify Repository Structure
+# Check all files are present
+ls -la ~/ecommerce-app
+
+# Expected files:
+# - README.md
+# - app.py
+# - search.py
+# - cart.py
+# - auth.py
+# - REVIEW_NOTES.md
+Verify Git History
+# View complete commit history
+git log --oneline --all --graph
+
+# Check branch status
+git branch -a
+
+# Verify merge commits exist
+git log --merges --oneline
+Verify File Contents
+# Check main app integrates all modules
+cat app.py | grep -E "import|Initialize"
+
+# Verify authentication module has validation
+cat auth.py | grep -E "def validate"
+Test Application Components
+# Test each module loads without errors
+python3 search.py
+python3 cart.py
+python3 auth.py
+python3 app.py
+Troubleshooting
+Merge Conflict Issues
+Problem: Confused about conflict markers
+
+# View conflict markers explanation
+# <<<<<<< HEAD (your current branch changes)
+# ======= (separator)
+# >>>>>>> branch-name (incoming changes)
+
+# To abort a merge
+git merge --abort
+Problem: Accidentally committed conflict markers
+
+# Reset last commit (keep changes)
+git reset --soft HEAD~1
+
+# Fix the file and recommit
+Branch Management Issues
+Problem: Can't delete branch
+
+# Force delete unmerged branch (use cautiously)
+git branch -D branch-name
+
+# Check if branch is merged first
+git branch --merged
+Problem: Lost track of current branch
+
+# Show current branch clearly
+git branch --show-current
+
+# Show all branches with last commit
+git branch -v
+Common Git Workflow Mistakes
+Problem: Committed to wrong branch
+
+# Move last commit to new branch
+git branch new-branch-name
+git reset --hard HEAD~1
+git checkout new-branch-name
+Problem: Need to undo last commit
+
+# Undo commit, keep changes staged
+git reset --soft HEAD~1
+
+# Undo commit, keep changes unstaged
+git reset HEAD~1
+
+# Undo commit, discard changes (careful!)
+git reset --hard HEAD~1
+Conclusion
+You have successfully implemented a professional Git workflow including:
+
+Repository initialization with proper configuration
+Feature branch creation and management for parallel development
+Merge operations with conflict resolution strategies
+Simulated pull request workflow with code review process
+Branch cleanup and maintenance practices
+These skills form the foundation of collaborative software development. In real-world scenarios, you would use platforms like GitHub, GitLab, or Bitbucket for pull requests, but the underlying Git concepts remain identical. Understanding branching strategies, conflict resolution, and code review workflows prepares you for team-based development environments.
+
+Key Takeaways:
+
+Feature branches isolate development work
+Merge conflicts are normal and resolvable
+Code reviews improve quality before merging
+Clean commit history aids project maintenance
+Branch management prevents repository clutter
+Next Steps: Practice these workflows with larger projects, explore advanced Git commands like rebase and cherry-pick, and integrate with remote repositories for team collaboration.
