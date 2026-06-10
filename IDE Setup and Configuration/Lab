@@ -1,0 +1,422 @@
+IDE Setup and Configuration
+Prerequisites
+Basic Linux command-line knowledge
+Understanding of Python programming fundamentals
+Familiarity with package management concepts
+Basic understanding of file paths and directory structures
+Learning Objectives
+By completing this lab, you will:
+
+Install and configure VS Code for Python development
+Set up essential extensions for productivity
+Create and manage Python virtual environments
+Configure and use the integrated debugger
+Environment Setup
+You will use the bare-metal Linux machine provided by Al Nafi. Click the Start Lab button to access your environment. All tools will be installed during this lab.
+
+Task 1: Install VS Code and Essential Extensions
+Step 1: Install VS Code
+# Update package list
+sudo apt update
+
+# Install dependencies
+sudo apt install -y wget gpg apt-transport-https
+
+# Add Microsoft GPG key and repository
+wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
+sudo install -o root -g root -m 644 packages.microsoft.gpg /etc/apt/trusted.gpg.d/
+sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list'
+
+# Install VS Code
+sudo apt update
+sudo apt install -y code
+
+# Verify installation
+code --version
+Step 2: Launch VS Code
+# Start VS Code (use & to run in background)
+code . &
+Note: If running on a headless server, you can use VS Code Server or configure X11 forwarding. For this lab, we'll focus on command-line configuration.
+
+Step 3: Install Python Extensions via CLI
+# Install Python extension
+code --install-extension ms-python.python
+
+# Install Pylance for enhanced language support
+code --install-extension ms-python.vscode-pylance
+
+# Install Python Debugger
+code --install-extension ms-python.debugpy
+
+# Install additional productivity extensions
+code --install-extension ms-python.black-formatter
+code --install-extension ms-toolsai.jupyter
+
+# List installed extensions
+code --list-extensions
+Step 4: Create Workspace Configuration
+Create a project directory and configuration:
+
+# Create project directory
+mkdir -p ~/python-workspace
+cd ~/python-workspace
+
+# Create VS Code settings directory
+mkdir -p .vscode
+Create .vscode/settings.json:
+
+cat > .vscode/settings.json << 'EOF'
+{
+    "python.defaultInterpreterPath": "${workspaceFolder}/venv/bin/python",
+    "python.formatting.provider": "black",
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": true,
+    "editor.formatOnSave": true,
+    "editor.rulers": [88],
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 1000
+}
+EOF
+Task 2: Setup Virtual Environments and Configure Debugger
+Step 1: Install Python and Virtual Environment Tools
+# Install Python and pip
+sudo apt install -y python3 python3-pip python3-venv
+
+# Verify installation
+python3 --version
+pip3 --version
+Step 2: Create and Activate Virtual Environment
+# Navigate to workspace
+cd ~/python-workspace
+
+# Create virtual environment
+python3 -m venv venv
+
+# Activate virtual environment
+source venv/bin/activate
+
+# Verify activation (should show venv path)
+which python
+Step 3: Install Development Dependencies
+# Upgrade pip
+pip install --upgrade pip
+
+# Install common development tools
+pip install pylint black pytest ipython
+
+# Create requirements file
+pip freeze > requirements.txt
+
+# View installed packages
+pip list
+Step 4: Create Sample Python Application
+Create a sample application to test debugging:
+
+cat > app.py << 'EOF'
+def calculate_factorial(n: int) -> int:
+    """
+    Calculate factorial of a number.
+    
+    Args:
+        n: Non-negative integer
+    
+    Returns:
+        Factorial of n
+    """
+    # TODO: Add input validation for negative numbers
+    if n == 0 or n == 1:
+        return 1
+    
+    result = 1
+    for i in range(2, n + 1):
+        result *= i
+    
+    return result
+
+
+def process_numbers(numbers: list) -> dict:
+    """
+    Process a list of numbers and return statistics.
+    
+    Args:
+        numbers: List of integers
+    
+    Returns:
+        Dictionary with sum, average, and factorials
+    """
+    # TODO: Implement error handling for empty list
+    # TODO: Calculate sum and average
+    # TODO: Calculate factorial for each number (if <= 10)
+    
+    stats = {
+        'sum': 0,
+        'average': 0.0,
+        'factorials': {}
+    }
+    
+    # Your implementation here
+    
+    return stats
+
+
+def main():
+    """Main function to demonstrate debugging."""
+    test_numbers = [3, 5, 7, 2]
+    
+    print("Testing factorial calculation:")
+    for num in test_numbers:
+        result = calculate_factorial(num)
+        print(f"Factorial of {num} is {result}")
+    
+    print("\nProcessing numbers:")
+    stats = process_numbers(test_numbers)
+    print(f"Statistics: {stats}")
+
+
+if __name__ == "__main__":
+    main()
+EOF
+Step 5: Configure Debugger
+Create .vscode/launch.json:
+
+cat > .vscode/launch.json << 'EOF'
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Python: Debug App",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/app.py",
+            "console": "integratedTerminal",
+            "args": [],
+            "env": {},
+            "stopOnEntry": false
+        }
+    ]
+}
+EOF
+Step 6: Test Debugging with CLI
+Since we're working in a command-line environment, use Python's built-in debugger:
+
+# Run with pdb (Python debugger)
+python -m pdb app.py
+Common pdb commands:
+
+l (list): Show current code
+n (next): Execute next line
+s (step): Step into function
+c (continue): Continue execution
+b <line>: Set breakpoint
+p <variable>: Print variable value
+q (quit): Exit debugger
+Step 7: Create Debug Helper Script
+cat > debug_helper.py << 'EOF'
+import sys
+import pdb
+
+def debug_function(func):
+    """
+    Decorator to enable debugging for a function.
+    
+    Usage:
+        @debug_function
+        def my_function():
+            pass
+    """
+    def wrapper(*args, **kwargs):
+        print(f"Debugging {func.__name__}")
+        pdb.set_trace()
+        return func(*args, **kwargs)
+    return wrapper
+
+
+# TODO: Add a function to set conditional breakpoints
+def conditional_breakpoint(condition: bool, message: str = ""):
+    """
+    Set a breakpoint only if condition is True.
+    
+    Args:
+        condition: Boolean condition to check
+        message: Optional message to display
+    """
+    # Your implementation here
+    pass
+
+
+# TODO: Create a context manager for debugging code blocks
+class DebugContext:
+    """
+    Context manager for debugging code blocks.
+    
+    Usage:
+        with DebugContext("Processing data"):
+            # code to debug
+            pass
+    """
+    def __init__(self, description: str):
+        self.description = description
+    
+    def __enter__(self):
+        # Your implementation here
+        pass
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # Your implementation here
+        pass
+EOF
+Step 8: Create Tasks Configuration
+Create .vscode/tasks.json for common development tasks:
+
+cat > .vscode/tasks.json << 'EOF'
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run Python File",
+            "type": "shell",
+            "command": "${workspaceFolder}/venv/bin/python",
+            "args": ["${file}"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Run Tests",
+            "type": "shell",
+            "command": "${workspaceFolder}/venv/bin/pytest",
+            "args": ["-v"],
+            "group": "test"
+        },
+        {
+            "label": "Format Code",
+            "type": "shell",
+            "command": "${workspaceFolder}/venv/bin/black",
+            "args": ["${file}"]
+        },
+        {
+            "label": "Lint Code",
+            "type": "shell",
+            "command": "${workspaceFolder}/venv/bin/pylint",
+            "args": ["${file}"]
+        }
+    ]
+}
+EOF
+Verification
+Verify VS Code Installation
+# Check VS Code version
+code --version
+
+# List installed extensions
+code --list-extensions | grep python
+Expected output should show Python-related extensions installed.
+
+Verify Virtual Environment
+# Activate environment
+cd ~/python-workspace
+source venv/bin/activate
+
+# Check Python path (should point to venv)
+which python
+
+# Verify packages
+pip list | grep -E "pylint|black|pytest"
+Test Application Execution
+# Run the application
+python app.py
+Expected output:
+
+Testing factorial calculation:
+Factorial of 3 is 6
+Factorial of 5 is 120
+Factorial of 7 is 5040
+Factorial of 2 is 2
+
+Processing numbers:
+Statistics: {'sum': 0, 'average': 0.0, 'factorials': {}}
+Test Debugging Configuration
+# Test with pdb
+python -m pdb app.py
+
+# At pdb prompt, try:
+# (Pdb) b 15
+# (Pdb) c
+# (Pdb) p n
+# (Pdb) q
+Verify Configuration Files
+# Check all configuration files exist
+ls -la .vscode/
+
+# Display settings
+cat .vscode/settings.json
+cat .vscode/launch.json
+cat .vscode/tasks.json
+Troubleshooting Tips
+VS Code Installation Issues
+# If GPG key fails, try alternative method
+curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg
+sudo mv microsoft.gpg /etc/apt/trusted.gpg.d/microsoft.gpg
+
+# Clear apt cache if needed
+sudo apt clean
+sudo apt update
+Virtual Environment Activation Issues
+# If activation fails, check venv creation
+python3 -m venv --clear venv
+
+# Ensure correct permissions
+chmod +x venv/bin/activate
+Extension Installation Issues
+# Install extensions with verbose output
+code --install-extension ms-python.python --force
+
+# Check extension directory
+ls ~/.vscode/extensions/
+Python Path Issues
+# Verify Python in venv
+ls -l venv/bin/python*
+
+# Create symbolic link if needed
+ln -s venv/bin/python3 venv/bin/python
+Challenge Tasks
+Complete these tasks to enhance your setup:
+
+Complete the process_numbers function in app.py:
+
+Calculate sum and average of the input list
+Generate factorials for numbers <= 10
+Add error handling for empty lists
+Implement the debugging helpers in debug_helper.py:
+
+Complete conditional_breakpoint function
+Implement DebugContext context manager
+Test both with sample code
+Create a test file test_app.py:
+
+Write pytest tests for calculate_factorial
+Write tests for process_numbers
+Run tests using the configured task
+Add custom snippets:
+
+Create .vscode/python.code-snippets
+Add snippets for common patterns (function, class, test)
+Conclusion
+You have successfully:
+
+Installed and configured VS Code with Python extensions
+Created and managed Python virtual environments
+Configured debugging tools and launch configurations
+Set up workspace settings and tasks for productivity
+This development environment provides a solid foundation for Python projects with proper isolation, debugging capabilities, and productivity tools. The virtual environment ensures dependency management, while the debugger configuration enables efficient troubleshooting. These skills are essential for professional Python development workflows.
+
+Next Steps: Practice using breakpoints, explore additional VS Code extensions, and customize your environment further based on project needs.
